@@ -75,13 +75,13 @@ module led_display (
    //---------------------------------------------------------
    //                         Debug                         --
    //---------------------------------------------------------
-   
+   /*
    blink blink_inst (
       .clk_in        ( clk100MHz ),
       .n_reset_in    ( nrst ),
       .led_out       ( blink_led ));
    
    assign LED_DEBUG[0] = blink_led;
-   
+   */
    
 endmodule

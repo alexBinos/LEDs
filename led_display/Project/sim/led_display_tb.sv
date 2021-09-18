@@ -67,6 +67,8 @@ module led_display_tb();
    led_display_driver #(
          .NUM_ROWS            ( NUM_ROW_PIXELS ),
          .NUM_COLS            ( NUM_COL_PIXELS ),
+         .WRITE_FREQ          ( 1_000_000 ),
+         .FADE_TIME           ( 10_000 ),
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
       led_display_driver_uut (
          .clk_in              ( clk ),
@@ -82,20 +84,20 @@ module led_display_tb();
       
    
    led_display_driver_phy #(
-         .WRITE_FREQ          ( 1_000_000 ),
+         .WRITE_FREQ          ( 1_000 ),
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
       led_display_driver_phy_uut (
-         .clk_in        ( clk ),
-         .n_reset_in    ( nrst ),
-         .enable_in     ( drv_enable ),
-         .ready_out     ( drv_ready ),
+         .clk_in              ( clk ),
+         .n_reset_in          ( nrst ),
+         .enable_in           ( drv_enable ),
+         .ready_out           ( drv_ready ),
          
-         .pixel_top_in  ( drv_pxl_top ),
-         .pixel_bot_in  ( drv_pxl_bot ),
+         .pixel_top_in        ( drv_pxl_top ),
+         .pixel_bot_in        ( drv_pxl_bot ),
          
-         .rgb_top_out   ( drv_bit_top ),
-         .rgb_bot_out   ( drv_bit_bot ),
-         .bit_clk_out   ( drv_bclk ));
+         .rgb_top_out         ( drv_bit_top ),
+         .rgb_bot_out         ( drv_bit_bot ),
+         .bit_clk_out         ( drv_bclk ));
    
    //---------------------------------------------------------
    //                   Sim - Display Module                --
@@ -129,7 +131,7 @@ module led_display_tb();
       $display("SIMULATION RUNNING");
       
       disp_colour = 23'h001122;
-      disp_mode = 4'b0001;
+      disp_mode = 4'b0010;
       
       reset();
       

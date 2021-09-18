@@ -21,6 +21,7 @@ module led_display_driver #(
    parameter integer NUM_ROWS           = 32,            // Number of rows in the matrix
    parameter integer NUM_COLS           = 64,            // Number of columns in the matrix
    parameter integer WRITE_FREQ         = 1_000_000,     // Data clock frequency (1MHz)
+   parameter integer FADE_TIME          = 10_000_000,    // 10ms; time between updating the fade value
    parameter integer SYS_CLK_FREQ       = 100_000_000)   // Board clock frequency (100MHz)
 (
    input wire           clk_in,
@@ -43,19 +44,30 @@ module led_display_driver #(
    //             Local Parameters and Types                --
    //---------------------------------------------------------
    
-      localparam integer COL_W = $clog2(NUM_COLS + 1);
+      localparam integer COL_W             = $clog2(NUM_COLS + 1);
+      localparam integer SYS_CLK_PER       = 1_000_000_000 / SYS_CLK_FREQ;
+      localparam integer FADE_CYCLES       = (FADE_TIME / SYS_CLK_PER);       // Clock cycles to count
+      localparam integer FADE_CYCLES_W     = $clog2(FADE_CYCLES + 1);
    
    //---------------------------------------------------------
    //                Variables and Signals                  --
    //---------------------------------------------------------
    
-   reg phy_enable;
-   wire phy_ready;
-   reg [23:0] pixel_top_phy;
-   reg [23:0] pixel_bot_phy;
+   // PHY control
+   reg                  phy_enable;
+   wire                 phy_ready;
+   reg [23:0]           pixel_top_phy;
+   reg [23:0]           pixel_bot_phy;
+   reg [(COL_W - 1):0]  pixel_counter;
+   reg [3:0]            addr;
    
-   reg [(COL_W - 1):0] pixel_counter;
-   reg [3:0] addr;
+   // Colour fade
+   reg [23:0]                    fade;
+   reg [(FADE_CYCLES_W - 1):0]   fade_counter;
+   reg                           fade_trig;
+   reg [7:0]                     fade_red;
+   reg [7:0]                     fade_green;
+   reg [7:0]                     fade_blue;
    
    
    //---------------------------------------------------------
@@ -71,12 +83,25 @@ module led_display_driver #(
       end
       else begin
          if (phy_ready) begin
+            
+            pixel_counter <= pixel_counter + 1'b1;
+            phy_enable <= 1'b1;
+            
+            // Colour mode select
             if (mode_in == 4'h1) begin
                // Solid colour
                pixel_top_phy <= colour_in;
                pixel_bot_phy <= colour_in;
-               pixel_counter <= pixel_counter + 1'b1;
-               phy_enable <= 1'b1;
+            end
+            else if (mode_in == 4'h2) begin
+               // RGB fade
+               pixel_top_phy <= fade;
+               pixel_bot_phy <= fade;
+            end
+            else begin
+               // Invalid mode
+               pixel_top_phy <= 24'h000000;
+               pixel_bot_phy <= 24'h000000;
             end
          end
          else begin
@@ -85,6 +110,59 @@ module led_display_driver #(
                pixel_counter <= {COL_W{1'b0}};
                addr <= addr + 1'b1;
             end
+         end
+      end
+   end
+   
+   // Colour fade
+   always_ff @(posedge clk_in, negedge n_reset_in) begin
+      if (!n_reset_in) begin
+         fade         <= 24'h000000;
+         fade_red     <= 8'hFF;
+         fade_green   <= 8'h00;
+         fade_blue    <= 8'h00;
+      end
+      else begin
+         if (fade_trig) begin
+            if ((fade_red > 8'h00) && (fade_blue == 8'h00)) begin
+               fade_red     <= fade_red - 1'b1;
+               fade_green   <= fade_green + 1'b1;
+            end
+            else if ((fade_green > 8'h00) && (fade_red == 8'h00)) begin
+               fade_green   <= fade_green - 1'b1;
+               fade_blue    <= fade_blue + 1'b1;
+            end
+            else if ((fade_blue > 8'h00) && (fade_green == 8'h00)) begin
+               fade_blue    <= fade_blue - 1'b1;
+               fade_red     <= fade_red + 1'b1;
+            end
+            else begin
+               // Something went wrong, reset to default state
+               fade_red     <= 8'hFF;
+               fade_green   <= 8'h00;
+               fade_blue    <= 8'h00;
+            end
+         end
+         else begin
+            fade[23:0] <= {fade_red[7:0], fade_green[7:0], fade_blue[7:0]};
+         end
+      end
+   end
+   
+   // Slow clock for colour fade
+   always_ff @(posedge clk_in, negedge n_reset_in) begin
+      if (!n_reset_in) begin
+         fade_counter <= {FADE_CYCLES_W{1'b0}};
+         fade_trig <= 1'b0;
+      end
+      else begin
+         if (fade_counter >= FADE_CYCLES) begin
+            fade_counter <= {FADE_CYCLES_W{1'b0}};
+            fade_trig <= 1'b1;
+         end
+         else begin
+            fade_counter <= fade_counter + 1'b1;
+            fade_trig <= 1'b0;
          end
       end
    end

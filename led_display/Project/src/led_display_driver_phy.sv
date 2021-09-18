@@ -41,7 +41,7 @@ module led_display_driver_phy #(
    //---------------------------------------------------------
    
    localparam integer BIT_CLK_COUNT = SYS_CLK_FREQ / (WRITE_FREQ * 2); // Half period count
-   localparam integer BIT_CLK_COUNT_W = $clog2(BIT_CLK_COUNT);
+   localparam integer BIT_CLK_COUNT_W = $clog2(BIT_CLK_COUNT + 1);
    
    typedef enum logic [3:0]{
       SS_IDLE,
