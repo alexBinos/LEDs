@@ -44,22 +44,26 @@ module led_display_driver #(
    //             Local Parameters and Types                --
    //---------------------------------------------------------
    
-      localparam integer COL_W             = $clog2(NUM_COLS + 1);
-      localparam integer SYS_CLK_PER       = 1_000_000_000 / SYS_CLK_FREQ;
-      localparam integer FADE_CYCLES       = (FADE_TIME / SYS_CLK_PER);       // Clock cycles to count
-      localparam integer FADE_CYCLES_W     = $clog2(FADE_CYCLES + 1);
+   localparam integer COL_W             = $clog2(NUM_COLS + 1);
+   localparam integer SYS_CLK_PER       = 1_000_000_000 / SYS_CLK_FREQ;
+   localparam integer FADE_CYCLES       = (FADE_TIME / SYS_CLK_PER);       // Clock cycles to count
+   localparam integer FADE_CYCLES_W     = $clog2(FADE_CYCLES + 1);
    
    //---------------------------------------------------------
    //                Variables and Signals                  --
    //---------------------------------------------------------
    
    // PHY control
-   reg                  phy_enable;
-   wire                 phy_ready;
-   reg [23:0]           pixel_top_phy;
-   reg [23:0]           pixel_bot_phy;
-   reg [(COL_W - 1):0]  pixel_counter;
-   reg [3:0]            addr;
+   reg                           phy_enable;
+   wire                          phy_ready;
+   reg [23:0]                    pixel_top_phy;
+   reg [23:0]                    pixel_bot_phy;
+   reg [(COL_W - 1):0]           pixel_counter;
+   
+   // Display control
+   reg [3:0]                     addr;
+   reg                           latch_enable;
+   reg                           output_enable;
    
    // Colour fade
    reg [23:0]                    fade;
@@ -69,24 +73,23 @@ module led_display_driver #(
    reg [7:0]                     fade_green;
    reg [7:0]                     fade_blue;
    
-   
    //---------------------------------------------------------
    //                      PHY Control                      --
    //---------------------------------------------------------
    
    always_ff @(posedge clk_in, negedge n_reset_in) begin
       if (!n_reset_in) begin
-         pixel_top_phy <= 24'h000000;
-         pixel_bot_phy <= 24'h000000;
-         addr <= 3'b000;
-         pixel_counter <= {COL_W{1'b0}};
+         pixel_top_phy   <= 24'h000000;
+         pixel_bot_phy   <= 24'h000000;
+         addr            <= 3'b000;
+         pixel_counter   <= {COL_W{1'b0}};
+         latch_enable    <= 1'b0;
       end
       else begin
          if (phy_ready) begin
-            
-            pixel_counter <= pixel_counter + 1'b1;
-            phy_enable <= 1'b1;
-            
+            pixel_counter   <= pixel_counter + 1'b1;
+            phy_enable      <= 1'b1;
+            latch_enable    <= 1'b0;
             // Colour mode select
             if (mode_in == 4'h1) begin
                // Solid colour
@@ -107,8 +110,9 @@ module led_display_driver #(
          else begin
             phy_enable <= 1'b0;
             if (pixel_counter >= NUM_COLS) begin
-               pixel_counter <= {COL_W{1'b0}};
-               addr <= addr + 1'b1;
+               pixel_counter   <= {COL_W{1'b0}};
+               addr            <= addr + 1'b1;
+               latch_enable    <= 1'b1;
             end
          end
       end
@@ -152,17 +156,17 @@ module led_display_driver #(
    // Slow clock for colour fade
    always_ff @(posedge clk_in, negedge n_reset_in) begin
       if (!n_reset_in) begin
-         fade_counter <= {FADE_CYCLES_W{1'b0}};
-         fade_trig <= 1'b0;
+         fade_counter    <= {FADE_CYCLES_W{1'b0}};
+         fade_trig       <= 1'b0;
       end
       else begin
          if (fade_counter >= FADE_CYCLES) begin
-            fade_counter <= {FADE_CYCLES_W{1'b0}};
-            fade_trig <= 1'b1;
+            fade_counter    <= {FADE_CYCLES_W{1'b0}};
+            fade_trig       <= 1'b1;
          end
          else begin
-            fade_counter <= fade_counter + 1'b1;
-            fade_trig <= 1'b0;
+            fade_counter    <= fade_counter + 1'b1;
+            fade_trig       <= 1'b0;
          end
       end
    end
@@ -191,6 +195,9 @@ module led_display_driver #(
    //                   Output Control                      --
    //---------------------------------------------------------
    
-   assign addr_out = addr;
+   assign addr_out             = addr;
+   assign latch_enable_out     = latch_enable;
+   assign output_enable        = 1'b1; // TODO: Better implementation for OE
+   assign output_enable_out    = output_enable;
    
 endmodule
