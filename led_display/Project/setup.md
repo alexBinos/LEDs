@@ -12,4 +12,6 @@ cd <this dir>
 source build.tcl
 ```
 
-This project was built using Vivado 2019.2
+The automatically generated `vivado.jou`, `vivado.txt` files and the `.Xil` folder at this level can be deleted after the project has built.
+
+This project was built using Vivado 2019.2.
