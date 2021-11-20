@@ -29,12 +29,13 @@ module led_display_driver #(
    
    // Debug
    input wire [3:0]     mode_in,
-   input wire [23:0]    colour_in,
+   //input wire [23:0]    colour_in,
+   input wire [2:0]     colour_in,
    
    // Display control
    output wire          latch_enable_out,
    output wire          output_enable_out,
-   output wire [2:0]    addr_out,
+   output wire [3:0]    addr_out,
    output wire [2:0]    rgb_top_out,
    output wire [2:0]    rgb_bot_out,
    output wire          bit_clk_out
@@ -53,11 +54,13 @@ module led_display_driver #(
    //                Variables and Signals                  --
    //---------------------------------------------------------
    
+   genvar i;
+   
    // PHY control
    reg                           phy_enable;
    wire                          phy_ready;
-   reg [23:0]                    pixel_top_phy;
-   reg [23:0]                    pixel_bot_phy;
+   reg [2:0][(NUM_COLS - 1):0]   pixel_top_phy;
+   reg [2:0][(NUM_COLS - 1):0]   pixel_bot_phy;
    reg [(COL_W - 1):0]           pixel_counter;
    
    // Display control
@@ -77,10 +80,9 @@ module led_display_driver #(
    //                      PHY Control                      --
    //---------------------------------------------------------
    
+   // PHY control
    always_ff @(posedge clk_in, negedge n_reset_in) begin
       if (!n_reset_in) begin
-         pixel_top_phy   <= 24'h000000;
-         pixel_bot_phy   <= 24'h000000;
          addr            <= 3'b000;
          pixel_counter   <= {COL_W{1'b0}};
          latch_enable    <= 1'b0;
@@ -90,22 +92,6 @@ module led_display_driver #(
             pixel_counter   <= pixel_counter + 1'b1;
             phy_enable      <= 1'b1;
             latch_enable    <= 1'b0;
-            // Colour mode select
-            if (mode_in == 4'h1) begin
-               // Solid colour
-               pixel_top_phy <= colour_in;
-               pixel_bot_phy <= colour_in;
-            end
-            else if (mode_in == 4'h2) begin
-               // RGB fade
-               pixel_top_phy <= fade;
-               pixel_bot_phy <= fade;
-            end
-            else begin
-               // Invalid mode
-               pixel_top_phy <= 24'h000000;
-               pixel_bot_phy <= 24'h000000;
-            end
          end
          else begin
             phy_enable <= 1'b0;
@@ -117,6 +103,30 @@ module led_display_driver #(
          end
       end
    end
+   
+   // Pixel control
+   generate
+      for (i = 0; i < NUM_COLS; i++) begin : g_pixel_logic
+         always_ff @(posedge clk_in, negedge n_reset_in) begin
+            if (!n_reset_in) begin
+               pixel_top_phy[i] <= {NUM_COLS{1'b0}};
+               pixel_bot_phy[i] <= {NUM_COLS{1'b0}};
+            end
+            else begin
+               if (phy_ready) begin
+                  if (mode_in == 4'h1) begin
+                     pixel_top_phy[i] <= {NUM_COLS{colour_in[i]}};
+                     pixel_bot_phy[i] <= {NUM_COLS{colour_in[i]}};
+                  end
+                  else begin
+                     pixel_top_phy[i] <= {NUM_COLS{1'b0}};
+                     pixel_bot_phy[i] <= {NUM_COLS{1'b0}};
+                  end
+               end
+            end
+         end
+      end
+   endgenerate
    
    // Colour fade
    always_ff @(posedge clk_in, negedge n_reset_in) begin
@@ -184,8 +194,8 @@ module led_display_driver #(
          .enable_in     ( phy_enable ),
          .ready_out     ( phy_ready ),
             
-         .pixel_top_in  ( pixel_top_phy ),
-         .pixel_bot_in  ( pixel_bot_phy ),
+         .col_top_in  ( pixel_top_phy ),
+         .col_bot_in  ( pixel_bot_phy ),
          
          .rgb_top_out   ( rgb_top_out ),
          .rgb_bot_out   ( rgb_bot_out ),
@@ -197,7 +207,7 @@ module led_display_driver #(
    
    assign addr_out             = addr;
    assign latch_enable_out     = latch_enable;
-   assign output_enable        = 1'b1; // TODO: Better implementation for OE
+   assign output_enable        = !latch_enable;
    assign output_enable_out    = output_enable;
    
 endmodule

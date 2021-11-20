@@ -8,7 +8,6 @@ module led_display_tb();
    localparam integer NUM_COL_PIXELS    = 64;
    localparam integer NUM_PIXELS        = NUM_ROW_PIXELS * NUM_COL_PIXELS;
    
-   
    //---------------------------------------------------------
    //                   Clocking and Resets                 --
    //---------------------------------------------------------
@@ -31,17 +30,17 @@ module led_display_tb();
    logic          drv_enable;
    logic          drv_done;
    logic          drv_ready;
-   logic [23:0]   drv_pxl_top;
-   logic [23:0]   drv_pxl_bot;
+   logic [2:0][(NUM_COL_PIXELS - 1):0]   drv_pxl_top;
+   logic [2:0][(NUM_COL_PIXELS - 1):0]   drv_pxl_bot;
    logic [2:0]    drv_bit_top;
    logic [2:0]    drv_bit_bot;
    logic          drv_bclk;
    
    logic [3:0]    disp_mode;
-   logic [23:0]   disp_colour;
+   logic [2:0]    disp_colour;
    logic          disp_le;
    logic          disp_oe;
-   logic [2:0]    disp_addr;
+   logic [3:0]    disp_addr;
    logic [2:0]    disp_rgb_top;
    logic [2:0]    disp_rgb_bot;
    logic          disp_bclk;
@@ -81,10 +80,9 @@ module led_display_tb();
          .rgb_top_out         ( disp_rgb_top ),
          .rgb_bot_out         ( disp_rgb_bot ),
          .bit_clk_out         ( disp_bclk ));
-      
    
    led_display_driver_phy #(
-         .WRITE_FREQ          ( 1_000 ),
+         .WRITE_FREQ          ( 1_000_000 ),
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
       led_display_driver_phy_uut (
          .clk_in              ( clk ),
@@ -92,8 +90,8 @@ module led_display_tb();
          .enable_in           ( drv_enable ),
          .ready_out           ( drv_ready ),
          
-         .pixel_top_in        ( drv_pxl_top ),
-         .pixel_bot_in        ( drv_pxl_bot ),
+         .col_top_in          ( drv_pxl_top ),
+         .col_bot_in          ( drv_pxl_bot ),
          
          .rgb_top_out         ( drv_bit_top ),
          .rgb_bot_out         ( drv_bit_bot ),
@@ -130,15 +128,16 @@ module led_display_tb();
       
       $display("SIMULATION RUNNING");
       
-      disp_colour = 23'h001122;
-      disp_mode = 4'b0010;
-      
       reset();
       
-      #10000
+      # 5000
+      
+      disp_colour = 3'b111;
+      disp_mode = 4'h1;
+      
       //driver_phy_test();
       
-      
+      #1000000
       $stop();
       
    end
@@ -196,7 +195,9 @@ module led_display_tb();
       return;
    endtask
    
-   task drv_write_pxl(input bit [24:0] pxl_top, input bit [24:0] pxl_bot);
+   task drv_write_row(
+         input bit [2:0][(NUM_COL_PIXELS - 1):0] pxl_top, 
+         input bit [2:0][(NUM_COL_PIXELS - 1):0] pxl_bot);
       drv_pxl_top = pxl_top;
       drv_pxl_bot = pxl_bot;
       drv_enable = 1'b0;
@@ -230,8 +231,8 @@ module led_display_tb();
       
       # 1000
       
-      drv_write_pxl(24'h112233, 24'h445566);
-      drv_write_pxl(24'h010203, 24'h616263);
+      drv_write_row(64'h112233445566_778899AABBCC, 64'hFFEEDDCC_BBAA9988);
+      /*drv_write_pxl(24'h010203, 24'h616263);
       drv_write_pxl(24'h000000, 24'hFFFFFF);
       drv_write_pxl(24'h00DEAD, 24'h00BEEF);
       drv_write_pxl(24'h123456, 24'h789ABC);
@@ -242,7 +243,7 @@ module led_display_tb();
       drv_write_pxl(24'h123456, 24'h789ABC);
       drv_write_pxl(24'h000000, 24'hFFFFFF);
       drv_write_pxl(24'h00DEAD, 24'h00BEEF);
-      drv_write_pxl(24'hFFFFFF, 24'hFFFFFF);
+      drv_write_pxl(24'hFFFFFF, 24'hFFFFFF);*/
       
       #10000
       return;
