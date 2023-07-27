@@ -1,4 +1,4 @@
-For first time project setup, run the build.bat file or,
+For first time project setup, run the `build.bat` file or,
 
 Open Vivado and select Window>TCL Console (Ctrl + Shift + T)
 <br>

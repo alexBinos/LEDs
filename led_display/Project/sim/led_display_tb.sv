@@ -2,11 +2,13 @@
 
 module led_display_tb();
    
-   localparam integer SYS_CLK_FREQ      = 100_000_000;
-   localparam integer HALF_CLK_PERIOD   = 5; // ns
-   localparam integer NUM_ROW_PIXELS    = 32;
-   localparam integer NUM_COL_PIXELS    = 64;
-   localparam integer NUM_PIXELS        = NUM_ROW_PIXELS * NUM_COL_PIXELS;
+   localparam integer SYS_CLK_FREQ      = 100_000_000;                        // Basys 3 on board clock frequency (Hz)
+   localparam integer HALF_CLK_PERIOD   = 5;                                  // (ns)
+   localparam integer NUM_ROW_PIXELS    = 32;                                 // Number of row pixels
+   localparam integer NUM_COL_PIXELS    = 64;                                 // Number of column pixels
+   localparam integer NUM_PIXELS        = NUM_ROW_PIXELS * NUM_COL_PIXELS;    // Total number of pixels in the array
+   localparam integer BCLK_FREQ         = 21_000_000;                         // Bit clock frequency
+   localparam integer REFRESH_CYCLES    = BCLK_FREQ / (NUM_PIXELS / 2);       // Number of bit clocks per display refresh
    
    //---------------------------------------------------------
    //                   Clocking and Resets                 --
@@ -45,6 +47,9 @@ module led_display_tb();
    logic [2:0]    disp_rgb_bot;
    logic          disp_bclk;
    
+   logic [7:0]    pwm_colour_in;
+   logic          pwm_colour_out;
+   
    //---------------------------------------------------------
    //                UUT - Memory Controller                --
    //---------------------------------------------------------
@@ -66,8 +71,9 @@ module led_display_tb();
    led_display_driver #(
          .NUM_ROWS            ( NUM_ROW_PIXELS ),
          .NUM_COLS            ( NUM_COL_PIXELS ),
-         .WRITE_FREQ          ( 1_000_000 ),
+         .WRITE_FREQ          ( BCLK_FREQ ),
          .FADE_TIME           ( 10_000 ),
+         .BOUNCE_FREQ         ( 10_000 ),
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
       led_display_driver_uut (
          .clk_in              ( clk ),
@@ -82,7 +88,7 @@ module led_display_tb();
          .bit_clk_out         ( disp_bclk ));
    
    led_display_driver_phy #(
-         .WRITE_FREQ          ( 1_000_000 ),
+         .WRITE_FREQ          ( BCLK_FREQ ),
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
       led_display_driver_phy_uut (
          .clk_in              ( clk ),
@@ -96,6 +102,16 @@ module led_display_tb();
          .rgb_top_out         ( drv_bit_top ),
          .rgb_bot_out         ( drv_bit_bot ),
          .bit_clk_out         ( drv_bclk ));
+   
+   pwm_generator #(
+         .SYS_CLK_FREQ     ( SYS_CLK_FREQ ),
+         .PWM_FREQ         ( REFRESH_CYCLES ),
+         .BIT_W            ( 8 ))
+      pwm_generator_uut (
+         .clk_in           ( clk ),
+         .n_reset_in       ( nrst ),
+         .colour_in        ( pwm_colour_in ),
+         .pwm_colour_out   ( pwm_colour_out ));
    
    //---------------------------------------------------------
    //                   Sim - Display Module                --
@@ -132,12 +148,13 @@ module led_display_tb();
       
       # 5000
       
-      disp_colour = 3'b111;
-      disp_mode = 4'h1;
+      disp_colour = 3'b001;
+      disp_mode = 4'h3;
       
       //driver_phy_test();
       
-      #1000000
+      
+      #10000
       $stop();
       
    end

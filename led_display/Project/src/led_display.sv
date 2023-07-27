@@ -35,8 +35,8 @@ module led_display (
    localparam integer SYS_CLK_FREQ   = 100_000_000;   // Basys 3 board clock frequency (100MHz)
    localparam integer NUM_ROWS       = 32;            // Number of rows on LED display
    localparam integer NUM_COLS       = 64;            // Number of columns on LED display
-   localparam integer WRITE_FREQ     = 16_000_000;    // Display bit clock frequency (16MHz)
-   localparam integer FADE_TIME      = 10_000_000;    // RGB fade mode transition time (10ms)
+   localparam integer WRITE_FREQ     = 21_000_000;    // Display bit clock frequency (16MHz)
+   localparam integer FADE_TIME      = 100_000_000;    // RGB fade mode transition time (5ms)
    
    //---------------------------------------------------------
    //                Variables and Signals                  --
@@ -90,6 +90,7 @@ module led_display (
          .NUM_COLS            ( NUM_COLS ),
          .WRITE_FREQ          ( WRITE_FREQ ),
          .FADE_TIME           ( FADE_TIME ),
+         .BOUNCE_FREQ         ( 64 ),
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
       led_display_driver_inst (
          .clk_in              ( clk100MHz ),
@@ -110,6 +111,7 @@ module led_display (
    assign LAT                     = SW[7] ? latch_enable : SW[8];
    assign OE                      = SW[7] ? output_enable : SW[9];
    assign {A, B, C, D}            = SW[10] ? addr[3:0] : SW[14:11];
+   
    
    //---------------------------------------------------------
    //                         Debug                         --
