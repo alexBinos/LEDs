@@ -67,7 +67,7 @@ module led_display_tb();
    //---------------------------------------------------------
    //                   UUT - Display Driver                --
    //---------------------------------------------------------
-   
+   /*
    led_display_driver #(
          .NUM_ROWS            ( NUM_ROW_PIXELS ),
          .NUM_COLS            ( NUM_COL_PIXELS ),
@@ -112,6 +112,16 @@ module led_display_tb();
          .n_reset_in       ( nrst ),
          .colour_in        ( pwm_colour_in ),
          .pwm_colour_out   ( pwm_colour_out ));
+   */
+   
+   led_display_driver_phy_tb #(
+         .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
+         .NUM_ROW_PIXELS      ( NUM_ROW_PIXELS ),
+         .NUM_COL_PIXELS      ( NUM_COL_PIXELS ),
+         .BCLK_FREQ           ( BCLK_FREQ ))
+      led_display_driver_phy_uut (
+         .clk_in     ( clk ),
+         .n_reset_in ( nrst ));
    
    //---------------------------------------------------------
    //                   Sim - Display Module                --
@@ -127,7 +137,7 @@ module led_display_tb();
       .le_in      (  ));
    */
    
-   
+   /*
    display_sim display_sim_inst (
       .bclk       ( disp_bclk ),
       .rgb_top    ( disp_rgb_top ),
@@ -135,7 +145,7 @@ module led_display_tb();
       .addr_in    ( disp_addr ),
       .oe_in      ( disp_oe ),
       .le_in      ( disp_le ));
-   
+   */
    //---------------------------------------------------------
    //                            Main                       --
    //---------------------------------------------------------
@@ -146,13 +156,9 @@ module led_display_tb();
       
       reset();
       
-      # 5000
+      # 1000
       
-      disp_colour = 3'b001;
-      disp_mode = 4'h3;
-      
-      //driver_phy_test();
-      
+      led_display_driver_phy_uut.test_00();
       
       #10000
       $stop();
