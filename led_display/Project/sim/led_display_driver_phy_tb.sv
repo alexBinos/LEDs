@@ -10,9 +10,7 @@ module led_display_driver_phy_tb #(
    input  wire n_reset_in
 );
    
-   localparam integer HALF_CLK_PERIOD   = 5;                                  // (ns)
-   localparam integer NUM_PIXELS        = NUM_ROW_PIXELS * NUM_COL_PIXELS;    // Total number of pixels in the array
-   localparam integer REFRESH_CYCLES    = BCLK_FREQ / (NUM_PIXELS / 2);       // Number of bit clocks per display refresh
+   import led_display_package::*;
    
    //---------------------------------------------------------
    //                         Signals                       --
@@ -26,6 +24,9 @@ module led_display_driver_phy_tb #(
    logic [2:0]                            drv_bit_top;
    logic [2:0]                            drv_bit_bot;
    logic                                  drv_bclk;
+   
+   pxl_col_t frame_top[$];
+   pxl_col_t frame_bot[$];
    
    //---------------------------------------------------------
    //                   UUT - Display Driver PHY            --
@@ -67,7 +68,12 @@ module led_display_driver_phy_tb #(
    task test_00 ();
       $display("LED display driver PHY, Test 00");
       
+      sim_load_frame();
+      
+      
       driver_phy_test();
+      
+      sim_check_frame();
       
       return;
    endtask
@@ -93,10 +99,16 @@ module led_display_driver_phy_tb #(
    endtask
    
    task drv_write_row(
-         input bit [2:0][(NUM_COL_PIXELS - 1):0] pxl_top, 
-         input bit [2:0][(NUM_COL_PIXELS - 1):0] pxl_bot);
-      drv_pxl_top = pxl_top;
-      drv_pxl_bot = pxl_bot;
+         input pxl_col_t pxl_top, 
+         input pxl_col_t pxl_bot);
+         
+      drv_pxl_top[0][63:0] = pxl_top.red;
+      drv_pxl_top[1][63:0] = pxl_top.green;
+      drv_pxl_top[2][63:0] = pxl_top.blue;
+      drv_pxl_bot[0][63:0] = pxl_bot.red;
+      drv_pxl_bot[1][63:0] = pxl_bot.green;
+      drv_pxl_bot[2][63:0] = pxl_bot.blue;
+      
       drv_enable = 1'b0;
       @(posedge clk_in);
       drv_enable = 1'b1;
@@ -109,10 +121,43 @@ module led_display_driver_phy_tb #(
    task driver_phy_test();
       $display("Running PHY test");
       
-      drv_write_row(64'h112233445566_778899AABBCC, 64'hFFEEDDCC_BBAA9988);
+      for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
+         drv_write_row(frame_top[i], frame_bot[i]);
+      end
       
       #10000
       return;
    endtask
+   
+   task sim_load_frame();
+      pxl_col_t t;
+      
+      for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
+         t.red     = i;
+         t.green   = i;
+         t.blue    = i;
+         frame_top.push_back(t);
+         frame_bot.push_back(t);
+      end
+      
+      return;
+   endtask : sim_load_frame
+   
+   task sim_check_frame();
+      pxl_col_t phy_frame;
+      pxl_col_t display_frame;
+      bit pass_local = 1;
+      
+      for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
+         phy_frame = frame_top.pop_front();
+         display_frame = display_sim_inst.frame.pop_front();
+         pass_local &= (phy_frame.red == display_frame.red);
+         
+         $display(phy_frame.red);
+         $display(display_frame.red);
+         $display("Pass: %b", pass_local);
+      end
+      
+   endtask : sim_check_frame
    
 endmodule

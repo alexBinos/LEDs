@@ -12,32 +12,40 @@ module display_sim #(
    input wire        le_in
 );
    
+   import led_display_package::*;
+   
    genvar i;
    
    logic  n_reset;
    
-   logic [2:0][(NUM_COLS - 1):0] pxl_top;
-   logic [2:0][(NUM_COLS - 1):0] pxl_bot;
+   pxl_col_t pxl_top;
+   pxl_col_t pxl_bot;
    logic [3:0] addr;
    
    bit [7:0] bit_cntr;
    bit bit_cntr_rst;
    bit [1:0] bclk_buf;
    
-   generate
-      for (i = 0; i < NUM_COLS; i++) begin : g_row_logic
-         always_ff @(posedge bclk, negedge n_reset) begin
-            if (!n_reset) begin
-               pxl_top[i] <= {NUM_COLS{1'b0}};
-               pxl_bot[i] <= {NUM_COLS{1'b0}};
-            end
-            else begin
-               pxl_top[i][(NUM_COLS - 1):0] <= {pxl_top[i][(NUM_COLS - 2):0], rgb_top[i]};
-               pxl_bot[i][(NUM_COLS - 1):0] <= {pxl_bot[i][(NUM_COLS - 2):0], rgb_bot[i]};
-            end
-         end
+   pxl_col_t frame[$];
+   
+   always_ff @(posedge bclk, negedge n_reset) begin
+      if (!n_reset) begin
+         pxl_top.red[(NUM_COLS - 1):0]     <= {NUM_COLS{1'b0}};
+         pxl_top.green[(NUM_COLS - 1):0]   <= {NUM_COLS{1'b0}};
+         pxl_top.blue[(NUM_COLS - 1):0]    <= {NUM_COLS{1'b0}};
+         pxl_bot.red[(NUM_COLS - 1):0]     <= {NUM_COLS{1'b0}};
+         pxl_bot.green[(NUM_COLS - 1):0]   <= {NUM_COLS{1'b0}};
+         pxl_bot.blue[(NUM_COLS - 1):0]    <= {NUM_COLS{1'b0}};
       end
-   endgenerate
+      else begin
+         pxl_top.red[(NUM_COLS - 1):0]     <= {pxl_top.red[(NUM_COLS - 2):0], rgb_top[0]};
+         pxl_top.green[(NUM_COLS - 1):0]   <= {pxl_top.green[(NUM_COLS - 2):0], rgb_top[1]};
+         pxl_top.blue[(NUM_COLS - 1):0]    <= {pxl_top.blue[(NUM_COLS - 2):0], rgb_top[2]};
+         pxl_bot.red[(NUM_COLS - 1):0]     <= {pxl_bot.red[(NUM_COLS - 2):0], rgb_bot[0]};
+         pxl_bot.green[(NUM_COLS - 1):0]   <= {pxl_bot.green[(NUM_COLS - 2):0], rgb_bot[1]};
+         pxl_bot.blue[(NUM_COLS - 1):0]    <= {pxl_bot.blue[(NUM_COLS - 2):0], rgb_bot[2]};
+      end
+   end
    
    always_ff @(posedge bclk, negedge n_reset) begin
       if (!n_reset) begin
@@ -62,6 +70,7 @@ module display_sim #(
       end
       else if (bit_cntr >= NUM_COLS) begin
          bit_cntr <= 8'h00;
+         frame.push_back(pxl_top);
          $display("Row received: Addr: %h, Top: %h, Bottom: %h", addr, pxl_top, pxl_bot);
       end
    end
