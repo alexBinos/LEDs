@@ -26,7 +26,8 @@ module display_sim #(
    bit bit_cntr_rst;
    bit [1:0] bclk_buf;
    
-   pxl_col_t frame[$];
+   pxl_col_t frame_top[$];
+   pxl_col_t frame_bot[$];
    
    always_ff @(posedge bclk, negedge n_reset) begin
       if (!n_reset) begin
@@ -70,7 +71,8 @@ module display_sim #(
       end
       else if (bit_cntr >= NUM_COLS) begin
          bit_cntr <= 8'h00;
-         frame.push_back(pxl_top);
+         frame_top.push_back(pxl_top);
+         frame_bot.push_back(pxl_bot);
          $display("Row received: Addr: %h, Top: %h, Bottom: %h", addr, pxl_top, pxl_bot);
       end
    end

@@ -101,13 +101,9 @@ module led_display_driver_phy_tb #(
    task drv_write_row(
          input pxl_col_t pxl_top, 
          input pxl_col_t pxl_bot);
-         
-      drv_pxl_top[0][63:0] = pxl_top.red;
-      drv_pxl_top[1][63:0] = pxl_top.green;
-      drv_pxl_top[2][63:0] = pxl_top.blue;
-      drv_pxl_bot[0][63:0] = pxl_bot.red;
-      drv_pxl_bot[1][63:0] = pxl_bot.green;
-      drv_pxl_bot[2][63:0] = pxl_bot.blue;
+      
+      drv_pxl_top = pxl_top;
+      drv_pxl_bot = pxl_bot;
       
       drv_enable = 1'b0;
       @(posedge clk_in);
@@ -150,14 +146,17 @@ module led_display_driver_phy_tb #(
       
       for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
          phy_frame = frame_top.pop_front();
-         display_frame = display_sim_inst.frame.pop_front();
-         pass_local &= (phy_frame.red == display_frame.red);
+         display_frame = display_sim_inst.frame_top.pop_front();
+         pass_local &= (phy_frame == display_frame);
          
-         $display(phy_frame.red);
-         $display(display_frame.red);
-         $display("Pass: %b", pass_local);
+         phy_frame = frame_bot.pop_front();
+         display_frame = display_sim_inst.frame_bot.pop_front();
+         pass_local &= (phy_frame == display_frame);
       end
       
+      $display("Pass: %b", pass_local);
+      
+      return;
    endtask : sim_check_frame
    
 endmodule
