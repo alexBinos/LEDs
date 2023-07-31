@@ -22,6 +22,8 @@ module led_display_tb();
    //                         Signals                       --
    //---------------------------------------------------------
    
+   bit pass;
+   
    logic          ram_clk;
    logic          ram_enable;
    logic          ram_write_enable;
@@ -118,7 +120,7 @@ module led_display_tb();
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
          .NUM_ROW_PIXELS      ( NUM_ROW_PIXELS ),
          .NUM_COL_PIXELS      ( NUM_COL_PIXELS ),
-         .BCLK_FREQ           ( BCLK_FREQ ))
+         .BCLK_FREQ           ( 25_000_000 ))
       led_display_driver_phy_uut (
          .clk_in     ( clk ),
          .n_reset_in ( nrst ));
@@ -158,7 +160,7 @@ module led_display_tb();
       
       # 1000
       
-      led_display_driver_phy_uut.test_00();
+      led_display_driver_phy_uut.test_00(pass);
       
       #10000
       $stop();

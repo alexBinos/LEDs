@@ -25,6 +25,7 @@ module led_display_driver_phy_tb #(
    logic [2:0]                            drv_bit_bot;
    logic                                  drv_bclk;
    
+   // TODO: Consolidate into array
    pxl_col_t frame_top[$];
    pxl_col_t frame_bot[$];
    
@@ -65,7 +66,8 @@ module led_display_driver_phy_tb #(
    //                         Tests                         --
    //---------------------------------------------------------
    
-   task test_00 ();
+   // TODO: Implement basic test
+   task test_00 (output bit pass);
       $display("LED display driver PHY, Test 00");
       
       sim_load_frame();
@@ -73,10 +75,19 @@ module led_display_driver_phy_tb #(
       
       driver_phy_test();
       
-      sim_check_frame();
+      sim_check_frame(pass);
       
       return;
    endtask
+   
+   // TODO: Implement random test
+   task test_01 (output bit pass);
+      $display("LED display driver PHY, Test 01");
+      
+      driver_phy_test();
+      sim_check_frame(pass);
+      return;
+   endtask : test_01
    
    //---------------------------------------------------------
    //                   Simulation Tasks                    --
@@ -139,7 +150,7 @@ module led_display_driver_phy_tb #(
       return;
    endtask : sim_load_frame
    
-   task sim_check_frame();
+   task sim_check_frame(output bit pass);
       pxl_col_t phy_frame;
       pxl_col_t display_frame;
       bit pass_local = 1;
@@ -155,6 +166,8 @@ module led_display_driver_phy_tb #(
       end
       
       $display("Pass: %b", pass_local);
+      
+      pass = pass_local;
       
       return;
    endtask : sim_check_frame
