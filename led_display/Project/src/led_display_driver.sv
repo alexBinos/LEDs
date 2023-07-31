@@ -50,6 +50,7 @@ module led_display_driver #(
    localparam integer COL_W             = $clog2(NUM_COLS + 1);
    localparam integer SYS_CLK_PER       = 1_000_000_000 / SYS_CLK_FREQ;
    localparam integer REFRESH_CYCLES    = WRITE_FREQ / (NUM_ROWS * NUM_COLS / 2);
+   localparam integer PWM_FREQ          = REFRESH_CYCLES / 256;
    
    // Effects
    localparam integer FADE_CYCLES       = (FADE_TIME / SYS_CLK_PER);
@@ -282,7 +283,7 @@ module led_display_driver #(
       for (i = 0; i < 3; i++) begin : g_pwm_generator
          pwm_generator #(
             .SYS_CLK_FREQ     ( SYS_CLK_FREQ ),
-            .PWM_FREQ         ( REFRESH_CYCLES ),
+            .PWM_FREQ         ( PWM_FREQ ),
             .BIT_W            ( 8 ))
          pwm_generator_uut (
             .clk_in           ( clk_in ),

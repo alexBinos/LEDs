@@ -35,8 +35,8 @@ module led_display (
    localparam integer SYS_CLK_FREQ   = 100_000_000;   // Basys 3 board clock frequency (100MHz)
    localparam integer NUM_ROWS       = 32;            // Number of rows on LED display
    localparam integer NUM_COLS       = 64;            // Number of columns on LED display
-   localparam integer WRITE_FREQ     = 21_000_000;    // Display bit clock frequency (16MHz)
-   localparam integer FADE_TIME      = 100_000_000;    // RGB fade mode transition time (5ms)
+   localparam integer WRITE_FREQ     = 20_000_000;    // Display bit clock frequency (16MHz)
+   localparam integer FADE_TIME      = 10_000_000;    // RGB fade mode transition time (5ms)
    
    //---------------------------------------------------------
    //                Variables and Signals                  --
