@@ -162,6 +162,8 @@ module led_display_tb();
       
       led_display_driver_phy_uut.test_00(pass);
       
+      $display("Overall pass: %d", pass);
+      
       #10000
       $stop();
       

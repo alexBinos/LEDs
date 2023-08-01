@@ -12,6 +12,12 @@ module led_display_driver_phy_tb #(
    
    import led_display_package::*;
    
+   typedef enum logic [3:0] {
+      p_count,
+      p_shifted,
+      p_random
+   } pattern_t;
+   
    //---------------------------------------------------------
    //                         Signals                       --
    //---------------------------------------------------------
@@ -66,15 +72,15 @@ module led_display_driver_phy_tb #(
    //                         Tests                         --
    //---------------------------------------------------------
    
-   // TODO: Implement basic test
    task test_00 (output bit pass);
-      $display("LED display driver PHY, Test 00");
-      
-      sim_load_frame();
-      
-      
-      driver_phy_test();
-      
+      $display("LED display driver PHY Test 00: Basic test");
+      /*
+      sim_load_frame(p_count);
+      driver_write_phy();
+      sim_check_frame(pass);
+      */
+      sim_load_frame(p_shifted);
+      driver_write_phy();
       sim_check_frame(pass);
       
       return;
@@ -84,7 +90,7 @@ module led_display_driver_phy_tb #(
    task test_01 (output bit pass);
       $display("LED display driver PHY, Test 01");
       
-      driver_phy_test();
+      driver_write_phy();
       sim_check_frame(pass);
       return;
    endtask : test_01
@@ -93,7 +99,7 @@ module led_display_driver_phy_tb #(
    //                   Simulation Tasks                    --
    //---------------------------------------------------------
    
-   task drv_wait_ready();
+   task driver_wait_for_ready();
       int timeout = 0;
       do 
       begin
@@ -107,9 +113,9 @@ module led_display_driver_phy_tb #(
       while(!drv_ready);
       
       return;
-   endtask
+   endtask : driver_wait_for_ready
    
-   task drv_write_row(
+   task driver_write_row(
          input pxl_col_t pxl_top, 
          input pxl_col_t pxl_bot);
       
@@ -121,31 +127,58 @@ module led_display_driver_phy_tb #(
       drv_enable = 1'b1;
       @(posedge clk_in);
       drv_enable = 1'b0;
-      drv_wait_ready();
+      driver_wait_for_ready();
       return;
-   endtask
+   endtask : driver_write_row
    
-   task driver_phy_test();
-      $display("Running PHY test");
+   task driver_write_phy();
+      int s = frame_top.size();
       
-      for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
-         drv_write_row(frame_top[i], frame_bot[i]);
+      assert(s == frame_bot.size()) else $warning("Top and bottom frame size \
+      mismatch: %d, %d", frame_top.size(), frame_bot.size());
+      
+      for (int i = 0; i < s; i++) begin
+         driver_write_row(frame_top[i], frame_bot[i]);
       end
-      
       #10000
       return;
-   endtask
+   endtask : driver_write_phy
    
-   task sim_load_frame();
+   task sim_load_frame(input pattern_t p);
       pxl_col_t t;
       
-      for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
-         t.red     = i;
-         t.green   = i;
-         t.blue    = i;
-         frame_top.push_back(t);
-         frame_bot.push_back(t);
-      end
+      case (p)
+         p_count : begin
+            for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
+               t.red     = i;
+               t.green   = i;
+               t.blue    = i;
+               frame_top.push_back(t);
+               frame_bot.push_back(t);
+            end
+         end
+         
+         p_shifted : begin
+            for (int i = 0; i < NUM_COL_PIXELS; i++) begin
+               t.red     = (1 << i);
+               t.green   = (1 << i);
+               t.blue    = (1 << i);
+               frame_top.push_back(t);
+               frame_bot.push_back(t);
+            end
+         end
+         
+         p_random : begin
+            for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
+               std::randomize(t.red);
+               std::randomize(t.green);
+               std::randomize(t.blue);
+               frame_top.push_back(t);
+               frame_bot.push_back(t);
+            end
+         end
+         
+      endcase
       
       return;
    endtask : sim_load_frame
@@ -165,7 +198,7 @@ module led_display_driver_phy_tb #(
          pass_local &= (phy_frame == display_frame);
       end
       
-      $display("Pass: %b", pass_local);
+      $display("Checker pass: %b", pass_local);
       
       pass = pass_local;
       
