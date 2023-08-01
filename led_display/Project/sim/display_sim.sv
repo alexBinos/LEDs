@@ -77,18 +77,10 @@ module display_sim #(
       end
    end
    
-   int timeout_counter = 0;
-   initial begin
-      forever begin
-         #5
-         if (timeout_counter < 10) begin
-            timeout_counter++;
-            n_reset = 1'b0;
-         end
-         else begin
-            n_reset = 1'b1;
-         end
-      end
-   end
+   task reset();
+      n_reset = 1'b0;
+      # 100
+      n_reset = 1'b1;
+   endtask : reset
    
 endmodule

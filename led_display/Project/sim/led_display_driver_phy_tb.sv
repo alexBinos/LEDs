@@ -74,11 +74,17 @@ module led_display_driver_phy_tb #(
    
    task test_00 (output bit pass);
       $display("LED display driver PHY Test 00: Basic test");
-      /*
+      
+      display_sim_inst.reset();
+      
       sim_load_frame(p_count);
       driver_write_phy();
       sim_check_frame(pass);
-      */
+      
+      # 1000
+      
+      display_sim_inst.reset();
+      
       sim_load_frame(p_shifted);
       driver_write_phy();
       sim_check_frame(pass);
@@ -187,18 +193,21 @@ module led_display_driver_phy_tb #(
       pxl_col_t phy_frame;
       pxl_col_t display_frame;
       bit pass_local = 1;
+      bit test;
       
       for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
          phy_frame = frame_top.pop_front();
          display_frame = display_sim_inst.frame_top.pop_front();
-         pass_local &= (phy_frame == display_frame);
+         test = (phy_frame == display_frame);
+         assert(test) else $display("Frame error: %X ;; %X", phy_frame, display_frame);
+         pass_local &= test;
          
          phy_frame = frame_bot.pop_front();
          display_frame = display_sim_inst.frame_bot.pop_front();
-         pass_local &= (phy_frame == display_frame);
+         test = (phy_frame == display_frame);
+         assert(test) else $display("Frame error: %X ;; %X", phy_frame, display_frame);
+         pass_local &= test;
       end
-      
-      $display("Checker pass: %b", pass_local);
       
       pass = pass_local;
       
