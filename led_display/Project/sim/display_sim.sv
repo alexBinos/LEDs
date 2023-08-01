@@ -2,7 +2,8 @@
 
 module display_sim #(
    parameter integer NUM_COLS = 64,
-   parameter integer NUM_ROWS = 32)
+   parameter integer NUM_ROWS = 32,
+   parameter integer VERBOSE = 1)
 (
    input wire        bclk,
    input wire [2:0]  rgb_top,
@@ -73,7 +74,9 @@ module display_sim #(
          bit_cntr <= 8'h00;
          frame_top.push_back(pxl_top);
          frame_bot.push_back(pxl_bot);
-         $display("Row received: Addr: %h, Top: %h, Bottom: %h", addr, pxl_top, pxl_bot);
+         if (VERBOSE) begin
+            $display("Row received: Addr: %h, Top: %h, Bottom: %h", addr, pxl_top, pxl_bot);
+         end
       end
    end
    

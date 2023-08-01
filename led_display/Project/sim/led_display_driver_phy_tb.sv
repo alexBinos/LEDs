@@ -60,13 +60,17 @@ module led_display_driver_phy_tb #(
    //                   Sim - Display Module                --
    //---------------------------------------------------------
    
-   display_sim display_sim_inst (
-      .bclk       ( drv_bclk ),
-      .rgb_top    ( drv_bit_top ),
-      .rgb_bot    ( drv_bit_bot ),
-      .addr_in    ( 4'h0 ),
-      .oe_in      (  ),
-      .le_in      (  ));
+   display_sim #(
+         .NUM_COLS   ( NUM_COL_PIXELS ),
+         .NUM_ROWS   ( NUM_ROW_PIXELS ),
+         .VERBOSE    ( 0 ))
+      display_sim_inst (
+         .bclk       ( drv_bclk ),
+         .rgb_top    ( drv_bit_top ),
+         .rgb_bot    ( drv_bit_bot ),
+         .addr_in    ( 4'h0 ),
+         .oe_in      (  ),
+         .le_in      (  ));
    
    //---------------------------------------------------------
    //                         Tests                         --
@@ -104,51 +108,6 @@ module led_display_driver_phy_tb #(
    //---------------------------------------------------------
    //                   Simulation Tasks                    --
    //---------------------------------------------------------
-   
-   task driver_wait_for_ready();
-      int timeout = 0;
-      do 
-      begin
-         @(posedge clk_in);
-         timeout++;
-         if (timeout > 1000000) begin
-            $warning("Display driver took too long to complete");
-            break;
-         end
-      end
-      while(!drv_ready);
-      
-      return;
-   endtask : driver_wait_for_ready
-   
-   task driver_write_row(
-         input pxl_col_t pxl_top, 
-         input pxl_col_t pxl_bot);
-      
-      drv_pxl_top = pxl_top;
-      drv_pxl_bot = pxl_bot;
-      
-      drv_enable = 1'b0;
-      @(posedge clk_in);
-      drv_enable = 1'b1;
-      @(posedge clk_in);
-      drv_enable = 1'b0;
-      driver_wait_for_ready();
-      return;
-   endtask : driver_write_row
-   
-   task driver_write_phy();
-      int s = frame_top.size();
-      
-      assert(s == frame_bot.size()) else $warning("Top and bottom frame size \
-      mismatch: %d, %d", frame_top.size(), frame_bot.size());
-      
-      for (int i = 0; i < s; i++) begin
-         driver_write_row(frame_top[i], frame_bot[i]);
-      end
-      #10000
-      return;
-   endtask : driver_write_phy
    
    task sim_load_frame(input pattern_t p);
       pxl_col_t t;
@@ -213,5 +172,50 @@ module led_display_driver_phy_tb #(
       
       return;
    endtask : sim_check_frame
+   
+   task driver_write_phy();
+      int s = frame_top.size();
+      
+      assert(s == frame_bot.size()) else $warning("Top and bottom frame size \
+      mismatch: %d, %d", frame_top.size(), frame_bot.size());
+      
+      for (int i = 0; i < s; i++) begin
+         driver_write_row(frame_top[i], frame_bot[i]);
+      end
+      #10000
+      return;
+   endtask : driver_write_phy
+   
+   task driver_write_row(
+         input pxl_col_t pxl_top, 
+         input pxl_col_t pxl_bot);
+      
+      drv_pxl_top = pxl_top;
+      drv_pxl_bot = pxl_bot;
+      
+      drv_enable = 1'b0;
+      @(posedge clk_in);
+      drv_enable = 1'b1;
+      @(posedge clk_in);
+      drv_enable = 1'b0;
+      driver_wait_for_ready();
+      return;
+   endtask : driver_write_row
+   
+   task driver_wait_for_ready();
+      int timeout = 0;
+      do 
+      begin
+         @(posedge clk_in);
+         timeout++;
+         if (timeout > 1000000) begin
+            $warning("Display driver took too long to complete");
+            break;
+         end
+      end
+      while(!drv_ready);
+      
+      return;
+   endtask : driver_wait_for_ready
    
 endmodule
