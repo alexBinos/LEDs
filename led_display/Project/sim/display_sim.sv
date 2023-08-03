@@ -14,7 +14,7 @@ module display_sim #(
 );
    
    import led_display_package::*;
-   
+      
    genvar i;
    
    logic  n_reset;
@@ -23,6 +23,8 @@ module display_sim #(
    pxl_col_t pxl_bot;
    logic [3:0] addr;
    
+   int bit_counter;
+   
    bit [7:0] bit_cntr;
    bit bit_cntr_rst;
    bit [1:0] bclk_buf;
@@ -30,60 +32,38 @@ module display_sim #(
    pxl_col_t frame_top[$];
    pxl_col_t frame_bot[$];
    
-   always_ff @(posedge bclk, negedge n_reset) begin
-      if (!n_reset) begin
-         pxl_top.red[(NUM_COLS - 1):0]     <= {NUM_COLS{1'b0}};
-         pxl_top.green[(NUM_COLS - 1):0]   <= {NUM_COLS{1'b0}};
-         pxl_top.blue[(NUM_COLS - 1):0]    <= {NUM_COLS{1'b0}};
-         pxl_bot.red[(NUM_COLS - 1):0]     <= {NUM_COLS{1'b0}};
-         pxl_bot.green[(NUM_COLS - 1):0]   <= {NUM_COLS{1'b0}};
-         pxl_bot.blue[(NUM_COLS - 1):0]    <= {NUM_COLS{1'b0}};
-      end
-      else begin
-         pxl_top.red[(NUM_COLS - 1):0]     <= {pxl_top.red[(NUM_COLS - 2):0], rgb_top[0]};
-         pxl_top.green[(NUM_COLS - 1):0]   <= {pxl_top.green[(NUM_COLS - 2):0], rgb_top[1]};
-         pxl_top.blue[(NUM_COLS - 1):0]    <= {pxl_top.blue[(NUM_COLS - 2):0], rgb_top[2]};
-         pxl_bot.red[(NUM_COLS - 1):0]     <= {pxl_bot.red[(NUM_COLS - 2):0], rgb_bot[0]};
-         pxl_bot.green[(NUM_COLS - 1):0]   <= {pxl_bot.green[(NUM_COLS - 2):0], rgb_bot[1]};
-         pxl_bot.blue[(NUM_COLS - 1):0]    <= {pxl_bot.blue[(NUM_COLS - 2):0], rgb_bot[2]};
-      end
-   end
-   
-   always_ff @(posedge bclk, negedge n_reset) begin
-      if (!n_reset) begin
-         addr <= 4'h0;
-      end
-      else begin
-         addr <= addr_in;
-      end
-   end
-   
-   bit clk;
-   initial forever #1 clk = ~clk;
-   
-   always_ff @(posedge clk) begin
-      bclk_buf[1:0] <= {bclk_buf[0], bclk};
-      
-      if (!n_reset) begin
-         bit_cntr <= 8'h00;
-      end
-      if (bclk_buf == 2'b01) begin
-         bit_cntr <= bit_cntr + 1'b1;
-      end
-      else if (bit_cntr >= NUM_COLS) begin
-         bit_cntr <= 8'h00;
-         frame_top.push_back(pxl_top);
-         frame_bot.push_back(pxl_bot);
-         if (VERBOSE) begin
-            $display("Row received: Addr: %h, Top: %h, Bottom: %h", addr, pxl_top, pxl_bot);
+   initial begin : shift_reg
+      forever begin
+         @(posedge bclk);
+         pxl_top.red     <= {pxl_top.red[(NUM_COLS - 2):0], rgb_top[2]};
+         pxl_top.green   <= {pxl_top.green[(NUM_COLS - 2):0], rgb_top[1]};
+         pxl_top.blue    <= {pxl_top.blue[(NUM_COLS - 2):0], rgb_top[0]};
+         pxl_bot.red     <= {pxl_bot.red[(NUM_COLS - 2):0], rgb_bot[2]};
+         pxl_bot.green   <= {pxl_bot.green[(NUM_COLS - 2):0], rgb_bot[1]};
+         pxl_bot.blue    <= {pxl_bot.blue[(NUM_COLS - 2):0], rgb_bot[0]};
+         #1step
+         bit_counter++;
+         
+         if (bit_counter == NUM_COLS) begin
+            update_queue();
+            bit_counter = 0;
          end
       end
-   end
+   end : shift_reg
+   
+   task update_queue();
+      $display("Writing %X at time %t", pxl_top, $time);
+      frame_top.push_back(pxl_top);
+      frame_bot.push_back(pxl_bot);
+      if (VERBOSE) begin
+         $display("Row received: Addr: %h, Top: %h, Bottom: %h", addr, pxl_top, pxl_bot);
+      end
+   endtask : update_queue
    
    task reset();
-      n_reset = 1'b0;
-      # 100
-      n_reset = 1'b1;
+      pxl_top = 'b0;
+      pxl_bot = 'b0;
+      bit_counter = 0;
    endtask : reset
    
 endmodule

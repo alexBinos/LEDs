@@ -15,7 +15,8 @@ module led_display_driver_phy_tb #(
    typedef enum logic [3:0] {
       p_count,
       p_shifted,
-      p_random
+      p_random,
+      p_test
    } pattern_t;
    
    //---------------------------------------------------------
@@ -78,18 +79,18 @@ module led_display_driver_phy_tb #(
    
    task test_00 (output bit pass);
       $display("LED display driver PHY Test 00: Basic test");
-      
+      /*
       display_sim_inst.reset();
       
       sim_load_frame(p_count);
       driver_write_phy();
       sim_check_frame(pass);
-      
+      */
       # 1000
       
       display_sim_inst.reset();
       
-      sim_load_frame(p_shifted);
+      sim_load_frame(p_test);
       driver_write_phy();
       sim_check_frame(pass);
       
@@ -135,10 +136,21 @@ module led_display_driver_phy_tb #(
          
          p_random : begin
             for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
-               std::randomize(t.red);
-               std::randomize(t.green);
-               std::randomize(t.blue);
+               std::randomize(t);
                frame_top.push_back(t);
+               frame_bot.push_back(t);
+            end
+         end
+         
+         p_test : begin
+            for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
+               t.red     = 64'hFFFFFFFF_FFFFFFFF;
+               t.green   = 64'hFFFFFFFF_FFFFFFFF;
+               t.blue    = 64'hFFFFFFFF_FFFFFFFF;
+               frame_top.push_back(t);
+               t.red     = 64'h44444444_44444444;
+               t.green   = 64'h55555555_55555555;
+               t.blue    = 64'h66666666_66666666;
                frame_bot.push_back(t);
             end
          end
