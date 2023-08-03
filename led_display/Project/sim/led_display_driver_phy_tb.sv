@@ -39,7 +39,7 @@ module led_display_driver_phy_tb #(
    //---------------------------------------------------------
    //                   UUT - Display Driver PHY            --
    //---------------------------------------------------------
-
+   
    led_display_driver_phy #(
          .WRITE_FREQ          ( BCLK_FREQ ),
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
@@ -47,14 +47,18 @@ module led_display_driver_phy_tb #(
       led_display_driver_phy_uut (
          .clk_in              ( clk_in ),
          .n_reset_in          ( n_reset_in ),
-         .enable_in           ( drv_enable ),
-         .ready_out           ( drv_ready ),
          
-         .col_top_in          ( drv_pxl_top ),
-         .col_bot_in          ( drv_pxl_bot ),
+         .row_valid_in        (  ),
+         .row_top_in          ( drv_pxl_top ),
+         .row_bot_in          ( drv_pxl_bot ),
+         .row_ready_out       ( drv_ready ),
          
-         .rgb_top_out         ( drv_bit_top ),
-         .rgb_bot_out         ( drv_bit_bot ),
+         .red_top_out         ( drv_bit_top[0] ),
+         .green_top_out       ( drv_bit_top[1] ),
+         .blue_top_out        ( drv_bit_top[2] ),
+         .red_bot_out         ( drv_bit_bot[0] ),
+         .green_bot_out       ( drv_bit_bot[1] ),
+         .blue_bot_out        ( drv_bit_bot[2] ),
          .bit_clk_out         ( drv_bclk ));
    
    //---------------------------------------------------------
@@ -79,13 +83,13 @@ module led_display_driver_phy_tb #(
    
    task test_00 (output bit pass);
       $display("LED display driver PHY Test 00: Basic test");
-      /*
+      
       display_sim_inst.reset();
       
       sim_load_frame(p_count);
       driver_write_phy();
       sim_check_frame(pass);
-      */
+      
       # 1000
       
       display_sim_inst.reset();
