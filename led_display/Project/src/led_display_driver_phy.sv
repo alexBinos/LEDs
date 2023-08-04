@@ -1,15 +1,8 @@
-/*
-               Display driver for LED matrix display
+/*                Display driver for LED matrix display
  
- State machine logic
- 
- 0. Wait for a new row of pixels
- 1. Buffer row
- 2. Shift out a new pixel after the rising edge of bit clock
- 3a. Increment total bit count
- 3b. If total bit count exceeds number of row bits, reset and increment address
- 3c. Assert done signal to trigger memory controller to send another pixel
- 3d. Return to IDLE
+ This module will buffer the incomming datastream and shift data out MSB first.
+ The bit clock is gated and driven from the main module clock, the latch signal
+ asserts for one clock cycle after a row is written.
  
 */
 
