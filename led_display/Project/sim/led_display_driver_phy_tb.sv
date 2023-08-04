@@ -37,6 +37,8 @@ module led_display_driver_phy_tb #(
    pxl_col_t frame_top[$];
    pxl_col_t frame_bot[$];
    
+   int num_tests;
+   
    //---------------------------------------------------------
    //                   UUT - Display Driver PHY            --
    //---------------------------------------------------------
@@ -84,7 +86,7 @@ module led_display_driver_phy_tb #(
    //---------------------------------------------------------
    
    task test_00 (output bit pass);
-      $display("LED display driver PHY Test 00: Basic test");
+      $display("LED display driver PHY Test 00: Basic vectors");
       
       display_sim_inst.reset();
       
@@ -96,19 +98,36 @@ module led_display_driver_phy_tb #(
       
       display_sim_inst.reset();
       
-      sim_load_frame(p_random);
+      sim_load_frame(p_shifted);
       driver_write_phy();
       sim_check_frame(pass);
+      
+      if (pass) begin
+         $display("Pass");
+      end
+      else begin
+         $display("Fail");
+      end
       
       return;
    endtask
    
-   // TODO: Implement random test
    task test_01 (output bit pass);
-      $display("LED display driver PHY, Test 01");
+      $display("LED display driver PHY, Test 01: Random vectors");
       
+      display_sim_inst.reset();
+      
+      sim_load_frame(p_random);
       driver_write_phy();
       sim_check_frame(pass);
+      
+      if (pass) begin
+         $display("Pass");
+      end
+      else begin
+         $display("Fail");
+      end
+      
       return;
    endtask : test_01
    
@@ -116,12 +135,20 @@ module led_display_driver_phy_tb #(
    //                   Simulation Tasks                    --
    //---------------------------------------------------------
    
+   task sim_init();
+      num_tests = 10;
+   endtask : sim_init
+   
+   task set_num_test(input int n);
+      num_tests = n;
+   endtask : set_num_test
+   
    task sim_load_frame(input pattern_t p);
       pxl_col_t t;
       
       case (p)
          p_count : begin
-            for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
+            for (int i = 0; i < num_tests; i++) begin
                t.red     = i;
                t.green   = i;
                t.blue    = i;
@@ -141,15 +168,16 @@ module led_display_driver_phy_tb #(
          end
          
          p_random : begin
-            for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
+            for (int i = 0; i < num_tests; i++) begin
                std::randomize(t);
                frame_top.push_back(t);
+               std::randomize(t);
                frame_bot.push_back(t);
             end
          end
          
          p_test : begin
-            for (int i = 0; i < 4; i++) begin
+            for (int i = 0; i < num_tests; i++) begin
                t.red     = 64'hFFFFFFFF_FFFFFFFF;
                t.green   = 64'hFFFFFFFF_FFFFFFFF;
                t.blue    = 64'hFFFFFFFF_FFFFFFFF;
