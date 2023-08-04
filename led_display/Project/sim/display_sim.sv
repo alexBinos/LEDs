@@ -35,35 +35,31 @@ module display_sim #(
    initial begin : shift_reg
       forever begin
          @(posedge bclk);
-         pxl_top.red     <= {pxl_top.red[(NUM_COLS - 2):0], rgb_top[2]};
-         pxl_top.green   <= {pxl_top.green[(NUM_COLS - 2):0], rgb_top[1]};
-         pxl_top.blue    <= {pxl_top.blue[(NUM_COLS - 2):0], rgb_top[0]};
-         pxl_bot.red     <= {pxl_bot.red[(NUM_COLS - 2):0], rgb_bot[2]};
-         pxl_bot.green   <= {pxl_bot.green[(NUM_COLS - 2):0], rgb_bot[1]};
-         pxl_bot.blue    <= {pxl_bot.blue[(NUM_COLS - 2):0], rgb_bot[0]};
          #1step
-         bit_counter++;
-         
-         if (bit_counter == NUM_COLS) begin
-            update_queue();
-            bit_counter = 0;
-         end
+         pxl_top.red     <= {pxl_top.red[(NUM_COLS - 2):0], rgb_top[0]};
+         pxl_top.green   <= {pxl_top.green[(NUM_COLS - 2):0], rgb_top[1]};
+         pxl_top.blue    <= {pxl_top.blue[(NUM_COLS - 2):0], rgb_top[2]};
+         pxl_bot.red     <= {pxl_bot.red[(NUM_COLS - 2):0], rgb_bot[0]};
+         pxl_bot.green   <= {pxl_bot.green[(NUM_COLS - 2):0], rgb_bot[1]};
+         pxl_bot.blue    <= {pxl_bot.blue[(NUM_COLS - 2):0], rgb_bot[2]};
       end
    end : shift_reg
    
+   always_ff @(posedge le_in) begin
+      update_queue();
+   end
+   
    task update_queue();
-      $display("Writing %X at time %t", pxl_top, $time);
       frame_top.push_back(pxl_top);
       frame_bot.push_back(pxl_bot);
       if (VERBOSE) begin
-         $display("Row received: Addr: %h, Top: %h, Bottom: %h", addr, pxl_top, pxl_bot);
+         $display("Row received: Addr: %h, Top: %h, Bottom: %h at time %t", addr, pxl_top, pxl_bot, $time);
       end
    endtask : update_queue
    
    task reset();
       pxl_top = 'b0;
       pxl_bot = 'b0;
-      bit_counter = 0;
    endtask : reset
    
 endmodule

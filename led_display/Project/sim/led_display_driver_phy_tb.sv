@@ -23,14 +23,15 @@ module led_display_driver_phy_tb #(
    //                         Signals                       --
    //---------------------------------------------------------
    
-   logic                                  drv_enable;
-   logic                                  drv_done;
-   logic                                  drv_ready;
-   logic [2:0][(NUM_COL_PIXELS - 1):0]    drv_pxl_top;
-   logic [2:0][(NUM_COL_PIXELS - 1):0]    drv_pxl_bot;
-   logic [2:0]                            drv_bit_top;
-   logic [2:0]                            drv_bit_bot;
-   logic                                  drv_bclk;
+   logic          drv_valid;
+   logic          drv_done;
+   logic          drv_ready;
+   pxl_col_t      drv_row_top;
+   pxl_col_t      drv_row_bot;
+   logic [2:0]    drv_bit_top;
+   logic [2:0]    drv_bit_bot;
+   logic          drv_bclk;
+   logic          drv_latch;
    
    // TODO: Consolidate into array
    pxl_col_t frame_top[$];
@@ -48,11 +49,12 @@ module led_display_driver_phy_tb #(
          .clk_in              ( clk_in ),
          .n_reset_in          ( n_reset_in ),
          
-         .row_valid_in        (  ),
-         .row_top_in          ( drv_pxl_top ),
-         .row_bot_in          ( drv_pxl_bot ),
+         .row_valid_in        ( drv_valid ),
+         .row_top_in          ( drv_row_top ),
+         .row_bot_in          ( drv_row_bot ),
          .row_ready_out       ( drv_ready ),
          
+         .latch_out           ( drv_latch ),
          .red_top_out         ( drv_bit_top[0] ),
          .green_top_out       ( drv_bit_top[1] ),
          .blue_top_out        ( drv_bit_top[2] ),
@@ -75,7 +77,7 @@ module led_display_driver_phy_tb #(
          .rgb_bot    ( drv_bit_bot ),
          .addr_in    ( 4'h0 ),
          .oe_in      (  ),
-         .le_in      (  ));
+         .le_in      ( drv_latch ));
    
    //---------------------------------------------------------
    //                         Tests                         --
@@ -94,7 +96,7 @@ module led_display_driver_phy_tb #(
       
       display_sim_inst.reset();
       
-      sim_load_frame(p_test);
+      sim_load_frame(p_random);
       driver_write_phy();
       sim_check_frame(pass);
       
@@ -147,14 +149,14 @@ module led_display_driver_phy_tb #(
          end
          
          p_test : begin
-            for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
+            for (int i = 0; i < 4; i++) begin
                t.red     = 64'hFFFFFFFF_FFFFFFFF;
                t.green   = 64'hFFFFFFFF_FFFFFFFF;
                t.blue    = 64'hFFFFFFFF_FFFFFFFF;
+               // t.red     = 64'h80000000_00000001;
+               // t.green   = 64'h00000000_00000000;
+               // t.blue    = 64'h00000000_00000000;
                frame_top.push_back(t);
-               t.red     = 64'h44444444_44444444;
-               t.green   = 64'h55555555_55555555;
-               t.blue    = 64'h66666666_66666666;
                frame_bot.push_back(t);
             end
          end
@@ -170,7 +172,9 @@ module led_display_driver_phy_tb #(
       bit pass_local = 1;
       bit test;
       
-      for (int i = 0; i < NUM_ROW_PIXELS; i++) begin
+      int s = frame_top.size();
+      
+      for (int i = 0; i < s; i++) begin
          phy_frame = frame_top.pop_front();
          display_frame = display_sim_inst.frame_top.pop_front();
          test = (phy_frame == display_frame);
@@ -206,15 +210,17 @@ module led_display_driver_phy_tb #(
          input pxl_col_t pxl_top, 
          input pxl_col_t pxl_bot);
       
-      drv_pxl_top = pxl_top;
-      drv_pxl_bot = pxl_bot;
-      
-      drv_enable = 1'b0;
-      @(posedge clk_in);
-      drv_enable = 1'b1;
-      @(posedge clk_in);
-      drv_enable = 1'b0;
       driver_wait_for_ready();
+      
+      drv_row_top = pxl_top;
+      drv_row_bot = pxl_bot;
+      
+      drv_valid = 1'b0;
+      @(posedge clk_in);
+      drv_valid = 1'b1;
+      @(posedge clk_in);
+      drv_valid = 1'b0;
+      
       return;
    endtask : driver_write_row
    

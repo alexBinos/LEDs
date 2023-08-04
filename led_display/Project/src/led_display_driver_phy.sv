@@ -29,6 +29,7 @@ module led_display_driver_phy #(
    output wire          row_ready_out,
    
    // Display control
+   output wire          latch_out,
    output wire          red_top_out,
    output wire          green_top_out,
    output wire          blue_top_out,
@@ -52,6 +53,8 @@ module led_display_driver_phy #(
    pxl_col_t                           row_top_buf;
    pxl_col_t                           row_bot_buf;
    reg                                 row_ready;
+   reg                                 write_row;
+   reg                                 latch;
    
    //---------------------------------------------------------
    //                   Main State Machine                  --
@@ -69,7 +72,7 @@ module led_display_driver_phy #(
             row_top_buf <= row_top_in;
             row_bot_buf <= row_bot_in;
          end
-         else if (pixel_bit_counter <= 1'b1) begin
+         else if (pixel_bit_counter == 1'b0) begin
             row_ready <= 1'b1;
          end
       end
@@ -77,14 +80,42 @@ module led_display_driver_phy #(
    
    always_ff @(posedge clk_in) begin
       if (!n_reset_in) begin
-         pixel_bit_counter <= GL_NUM_COL_PIXELS;
+         pixel_bit_counter <= (GL_NUM_COL_PIXELS - 1);
       end
       else begin
          if (row_valid_in) begin
-            pixel_bit_counter <= GL_NUM_COL_PIXELS;
+            pixel_bit_counter <= (GL_NUM_COL_PIXELS - 1);
          end
          else if (pixel_bit_counter > 0) begin
             pixel_bit_counter <= pixel_bit_counter - 1'b1;
+         end
+      end
+   end
+   
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         write_row <= 1'b0;
+      end
+      else begin
+         if (row_valid_in) begin
+            write_row <= 1'b1;
+         end
+         else if (pixel_bit_counter == 0) begin
+            write_row <= 1'b0;
+         end
+      end
+   end
+   
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         latch <= 1'b0;
+      end
+      else begin
+         if ((pixel_bit_counter == 0) && write_row) begin
+            latch <= 1'b1;
+         end
+         else begin
+            latch <= 1'b0;
          end
       end
    end
@@ -99,7 +130,8 @@ module led_display_driver_phy #(
    assign red_bot_out    = row_bot_buf.red[pixel_bit_counter];
    assign green_bot_out  = row_bot_buf.green[pixel_bit_counter];
    assign blue_bot_out   = row_bot_buf.blue[pixel_bit_counter];
-   assign bit_clk_out    = clk_in;
+   assign bit_clk_out    = write_row ? clk_in : 1'b0;
    assign row_ready_out  = row_ready;
+   assign latch_out      = latch;
    
 endmodule
