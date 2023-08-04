@@ -15,8 +15,7 @@ module led_display_driver_phy_tb #(
    typedef enum logic [3:0] {
       p_count,
       p_shifted,
-      p_random,
-      p_test
+      p_random
    } pattern_t;
    
    //---------------------------------------------------------
@@ -33,7 +32,6 @@ module led_display_driver_phy_tb #(
    logic          drv_bclk;
    logic          drv_latch;
    
-   // TODO: Consolidate into array
    pxl_col_t frame_top[$];
    pxl_col_t frame_bot[$];
    
@@ -135,15 +133,15 @@ module led_display_driver_phy_tb #(
    //                   Simulation Tasks                    --
    //---------------------------------------------------------
    
-   task sim_init();
+   task automatic sim_init();
       num_tests = 10;
    endtask : sim_init
    
-   task set_num_test(input int n);
+   task automatic set_num_test(input int n);
       num_tests = n;
    endtask : set_num_test
    
-   task sim_load_frame(input pattern_t p);
+   task automatic sim_load_frame(input pattern_t p);
       pxl_col_t t;
       
       case (p)
@@ -176,25 +174,12 @@ module led_display_driver_phy_tb #(
             end
          end
          
-         p_test : begin
-            for (int i = 0; i < num_tests; i++) begin
-               t.red     = 64'hFFFFFFFF_FFFFFFFF;
-               t.green   = 64'hFFFFFFFF_FFFFFFFF;
-               t.blue    = 64'hFFFFFFFF_FFFFFFFF;
-               // t.red     = 64'h80000000_00000001;
-               // t.green   = 64'h00000000_00000000;
-               // t.blue    = 64'h00000000_00000000;
-               frame_top.push_back(t);
-               frame_bot.push_back(t);
-            end
-         end
-         
       endcase
       
       return;
    endtask : sim_load_frame
    
-   task sim_check_frame(output bit pass);
+   task automatic sim_check_frame(output bit pass);
       pxl_col_t phy_frame;
       pxl_col_t display_frame;
       bit pass_local = 1;
@@ -221,7 +206,7 @@ module led_display_driver_phy_tb #(
       return;
    endtask : sim_check_frame
    
-   task driver_write_phy();
+   task automatic driver_write_phy();
       int s = frame_top.size();
       
       assert(s == frame_bot.size()) else $warning("Top and bottom frame size \
@@ -234,7 +219,7 @@ module led_display_driver_phy_tb #(
       return;
    endtask : driver_write_phy
    
-   task driver_write_row(
+   task automatic driver_write_row(
          input pxl_col_t pxl_top, 
          input pxl_col_t pxl_bot);
       
@@ -252,7 +237,7 @@ module led_display_driver_phy_tb #(
       return;
    endtask : driver_write_row
    
-   task driver_wait_for_ready();
+   task automatic driver_wait_for_ready();
       int timeout = 0;
       do 
       begin
