@@ -19,29 +19,21 @@ module display_sim #(
    
    logic  n_reset;
    
-   pxl_col_t pxl_top;
-   pxl_col_t pxl_bot;
    logic [3:0] addr;
    
-   int bit_counter;
-   
-   bit [7:0] bit_cntr;
-   bit bit_cntr_rst;
-   bit [1:0] bclk_buf;
-   
-   pxl_col_t frame_top[$];
-   pxl_col_t frame_bot[$];
+   rgb_row_t pxl;
+   rgb_row_t frame[$];
    
    initial begin : shift_reg
       forever begin
          @(posedge bclk);
          #1step
-         pxl_top.red     <= {pxl_top.red[(NUM_COLS - 2):0], rgb_top[0]};
-         pxl_top.green   <= {pxl_top.green[(NUM_COLS - 2):0], rgb_top[1]};
-         pxl_top.blue    <= {pxl_top.blue[(NUM_COLS - 2):0], rgb_top[2]};
-         pxl_bot.red     <= {pxl_bot.red[(NUM_COLS - 2):0], rgb_bot[0]};
-         pxl_bot.green   <= {pxl_bot.green[(NUM_COLS - 2):0], rgb_bot[1]};
-         pxl_bot.blue    <= {pxl_bot.blue[(NUM_COLS - 2):0], rgb_bot[2]};
+         pxl.top.red     <= {pxl.top.red[(NUM_COLS - 2):0], rgb_top[0]};
+         pxl.top.green   <= {pxl.top.green[(NUM_COLS - 2):0], rgb_top[1]};
+         pxl.top.blue    <= {pxl.top.blue[(NUM_COLS - 2):0], rgb_top[2]};
+         pxl.bot.red     <= {pxl.bot.red[(NUM_COLS - 2):0], rgb_bot[0]};
+         pxl.bot.green   <= {pxl.bot.green[(NUM_COLS - 2):0], rgb_bot[1]};
+         pxl.bot.blue    <= {pxl.bot.blue[(NUM_COLS - 2):0], rgb_bot[2]};
       end
    end : shift_reg
    
@@ -50,16 +42,14 @@ module display_sim #(
    end
    
    task update_queue();
-      frame_top.push_back(pxl_top);
-      frame_bot.push_back(pxl_bot);
+      frame.push_back(pxl);
       if (VERBOSE) begin
-         $display("Row received: Addr: %h, Top: %h, Bottom: %h at time %t", addr, pxl_top, pxl_bot, $time);
+         $display("Row received: Addr: %h, Top: %h, Bottom: %h at time %t", addr, pxl.top, pxl.bot, $time);
       end
    endtask : update_queue
    
    task reset();
-      pxl_top = 'b0;
-      pxl_bot = 'b0;
+      pxl = {GL_RGB_ROW_W{1'b0}};
    endtask : reset
    
 endmodule

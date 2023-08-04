@@ -15,7 +15,8 @@ module led_display_driver_phy_tb #(
    typedef enum logic [3:0] {
       p_count,
       p_shifted,
-      p_random
+      p_random,
+      p_test
    } pattern_t;
    
    //---------------------------------------------------------
@@ -25,15 +26,13 @@ module led_display_driver_phy_tb #(
    logic          drv_valid;
    logic          drv_done;
    logic          drv_ready;
-   pxl_col_t      drv_row_top;
-   pxl_col_t      drv_row_bot;
+   rgb_row_t      drv_row;
    logic [2:0]    drv_bit_top;
    logic [2:0]    drv_bit_bot;
    logic          drv_bclk;
    logic          drv_latch;
    
-   pxl_col_t frame_top[$];
-   pxl_col_t frame_bot[$];
+   rgb_row_t frame[$];
    
    int num_tests;
    
@@ -50,8 +49,7 @@ module led_display_driver_phy_tb #(
          .n_reset_in          ( n_reset_in ),
          
          .row_valid_in        ( drv_valid ),
-         .row_top_in          ( drv_row_top ),
-         .row_bot_in          ( drv_row_bot ),
+         .row_in              ( drv_row ),
          .row_ready_out       ( drv_ready ),
          
          .latch_out           ( drv_latch ),
@@ -70,7 +68,7 @@ module led_display_driver_phy_tb #(
    display_sim #(
          .NUM_COLS   ( NUM_COL_PIXELS ),
          .NUM_ROWS   ( NUM_ROW_PIXELS ),
-         .VERBOSE    ( 0 ))
+         .VERBOSE    ( 1 ))
       display_sim_inst (
          .bclk       ( drv_bclk ),
          .rgb_top    ( drv_bit_top ),
@@ -88,7 +86,9 @@ module led_display_driver_phy_tb #(
       
       display_sim_inst.reset();
       
-      sim_load_frame(p_count);
+      $display("Running %d", num_tests);
+      
+      sim_load_frame(p_test);
       driver_write_phy();
       sim_check_frame(pass);
       
@@ -142,35 +142,49 @@ module led_display_driver_phy_tb #(
    endtask : set_num_test
    
    task automatic sim_load_frame(input pattern_t p);
-      pxl_col_t t;
+      rgb_row_t t;
       
       case (p)
          p_count : begin
             for (int i = 0; i < num_tests; i++) begin
-               t.red     = i;
-               t.green   = i;
-               t.blue    = i;
-               frame_top.push_back(t);
-               frame_bot.push_back(t);
+               t.top.red     = i;
+               t.top.green   = i;
+               t.top.blue    = i;
+               t.bot.red     = i;
+               t.bot.green   = i;
+               t.bot.blue    = i;
+               frame.push_back(t);
             end
          end
          
          p_shifted : begin
-            for (int i = 0; i < NUM_COL_PIXELS; i++) begin
-               t.red     = (1 << i);
-               t.green   = (1 << i);
-               t.blue    = (1 << i);
-               frame_top.push_back(t);
-               frame_bot.push_back(t);
+            for (int i = 0; i < num_tests; i++) begin
+               t.top.red     = (1 << i);
+               t.top.green   = (1 << i);
+               t.top.blue    = (1 << i);
+               t.bot.red     = (1 << i);
+               t.bot.green   = (1 << i);
+               t.bot.blue    = (1 << i);
+               frame.push_back(t);
             end
          end
          
          p_random : begin
             for (int i = 0; i < num_tests; i++) begin
                std::randomize(t);
-               frame_top.push_back(t);
-               std::randomize(t);
-               frame_bot.push_back(t);
+               frame.push_back(t);
+            end
+         end
+         
+         p_test : begin
+            for (int i = 0; i < num_tests; i++) begin
+               t.top.red     = 64'h80000000_00000001;
+               t.top.green   = 64'h80000000_00000001;
+               t.top.blue    = 64'h80000000_00000001;
+               t.bot.red     = 64'h80000000_00000001;
+               t.bot.green   = 64'h80000000_00000001;
+               t.bot.blue    = 64'h80000000_00000001;
+               frame.push_back(t);
             end
          end
          
@@ -180,22 +194,16 @@ module led_display_driver_phy_tb #(
    endtask : sim_load_frame
    
    task automatic sim_check_frame(output bit pass);
-      pxl_col_t phy_frame;
-      pxl_col_t display_frame;
+      rgb_row_t phy_frame;
+      rgb_row_t display_frame;
       bit pass_local = 1;
       bit test;
       
-      int s = frame_top.size();
+      int s = frame.size();
       
       for (int i = 0; i < s; i++) begin
-         phy_frame = frame_top.pop_front();
-         display_frame = display_sim_inst.frame_top.pop_front();
-         test = (phy_frame == display_frame);
-         assert(test) else $display("Frame error: %X ;; %X", phy_frame, display_frame);
-         pass_local &= test;
-         
-         phy_frame = frame_bot.pop_front();
-         display_frame = display_sim_inst.frame_bot.pop_front();
+         phy_frame = frame.pop_front();
+         display_frame = display_sim_inst.frame.pop_front();
          test = (phy_frame == display_frame);
          assert(test) else $display("Frame error: %X ;; %X", phy_frame, display_frame);
          pass_local &= test;
@@ -207,26 +215,23 @@ module led_display_driver_phy_tb #(
    endtask : sim_check_frame
    
    task automatic driver_write_phy();
-      int s = frame_top.size();
-      
-      assert(s == frame_bot.size()) else $warning("Top and bottom frame size \
-      mismatch: %d, %d", frame_top.size(), frame_bot.size());
+      int s = frame.size();
       
       for (int i = 0; i < s; i++) begin
-         driver_write_row(frame_top[i], frame_bot[i]);
+         driver_write_row(frame[i]);
       end
-      #10000
+      
+      # 10000
+      
       return;
    endtask : driver_write_phy
    
    task automatic driver_write_row(
-         input pxl_col_t pxl_top, 
-         input pxl_col_t pxl_bot);
+         input rgb_row_t pxl);
       
       driver_wait_for_ready();
       
-      drv_row_top = pxl_top;
-      drv_row_bot = pxl_bot;
+      drv_row = pxl;
       
       drv_valid = 1'b0;
       @(posedge clk_in);
