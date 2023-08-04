@@ -10,7 +10,9 @@ module led_display_pattern_gen #(
    
    output rgb_row_t  row_out,
    output wire       row_valid_out,
-   input  wire       row_ready_in
+   input  wire       row_ready_in,
+   
+   output wire [3:0] row_address_out
 );
    
    
@@ -24,6 +26,7 @@ module led_display_pattern_gen #(
    
    rgb_row_t   row;
    reg         row_valid;
+   reg [3:0]   row_address;
    
    reg [3:0] mode_buf;
    
@@ -106,7 +109,22 @@ module led_display_pattern_gen #(
       end
    end
    
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         row_address <= {4{1'b0}};
+      end
+      else begin
+         if (mode_buf != mode_in) begin
+            row_address <= {4{1'b0}};
+         end
+         else if (row_valid) begin
+            row_address <= row_address + 1'b1;
+         end
+      end
+   end
+   
    assign row_valid_out = row_valid;
    assign row_out = row;
+   assign row_address_out = row_address;
    
 endmodule
