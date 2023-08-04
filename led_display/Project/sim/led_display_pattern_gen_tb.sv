@@ -49,20 +49,9 @@ module led_display_pattern_gen_tb #(
       pass = 0;
       
       for (int m = 0; m < 7; m++) begin
-      
-         sim_cycles(1);
-         ptg_row_ready = 1'b1;
-         ptg_mode = m[3:0];
-         
-         sim_cycles(2);
-         for (int i = 0; i < 4; i++) begin
-            ptg_row_ready = ~ptg_row_ready;
-            sim_cycles(1);
-         end
-         
+         drive(m);
          
          # 1000;
-      
       end
       
       if (pass) begin
@@ -96,5 +85,56 @@ module led_display_pattern_gen_tb #(
       #1step;
       return;
    endtask : sim_cycles
+   
+   task automatic drive(input logic [3:0] mode);
+      
+      sim_cycles(1);
+      ptg_row_ready = 1'b1;
+      ptg_mode = mode[3:0];
+      
+      sim_cycles(2);
+      for (int i = 0; i < num_tests; i++) begin
+         // TODO: Random ready toggling
+         ptg_row_ready = ~ptg_row_ready;
+         sim_cycles(1);
+      end
+      
+      return;
+   endtask : drive
+   
+   task static monitor_address();
+      int expected = 0;
+      int mode = 0;
+      int error_count = 0;
+      
+      sim_cycles(1);
+      
+      if (ptg_mode != mode) begin
+         mode = ptg_mode;
+         expected = 0;
+         // $display("New expected mode: %d", mode);
+      end
+      
+      if (ptg_row_address != expected) begin
+         error_count++;
+         $display("Address error; Expected: %d, Read %d; Time: %t", expected, ptg_row_address, $time);
+      end
+      
+      if (ptg_row_valid) begin
+         expected++;
+         if (expected == 16) begin
+            expected = 0;
+         end
+         // $display("New expected address: %d", expected);
+      end
+      
+      return;
+   endtask : monitor_address
+   
+   initial begin
+      forever begin
+         monitor_address();
+      end
+   end
    
 endmodule
