@@ -16,6 +16,11 @@ module led_display_pattern_gen_tb #(
    //                         Signals                       --
    //---------------------------------------------------------
    
+   logic [3:0] ptg_mode;
+   rgb_row_t   ptg_row;
+   logic       prg_row_valid;
+   logic       ptg_row_ready;
+   
    int num_tests;
    
    //---------------------------------------------------------
@@ -23,12 +28,14 @@ module led_display_pattern_gen_tb #(
    //---------------------------------------------------------
    
    led_display_pattern_gen #(
-         .WRITE_FREQ          ( BCLK_FREQ ),
-         .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
-         .NUM_COLS            ( NUM_COL_PIXELS ))
+         .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
       led_display_driver_phy_uut (
          .clk_in              ( clk_in ),
-         .n_reset_in          ( n_reset_in ));
+         .n_reset_in          ( n_reset_in ),
+         .mode_in             ( ptg_mode ),
+         .row_out             ( ptg_row ),
+         .row_valid_out       ( prg_row_valid ),
+         .row_ready_in        ( ptg_row_ready ));
    
    //---------------------------------------------------------
    //                         Tests                         --
@@ -38,6 +45,16 @@ module led_display_pattern_gen_tb #(
       $display("LED display pattern generator Test 00: Basic patterns");
       
       pass = 0;
+      
+      for (int m = 0; m < 7; m++) begin
+      
+         @(posedge clk_in);
+         ptg_row_ready = 1'b1;
+         ptg_mode = m[3:0];
+      
+         # 1000;
+      
+      end
       
       if (pass) begin
          $display("Pass");
@@ -55,6 +72,8 @@ module led_display_pattern_gen_tb #(
    
    task automatic sim_init();
       num_tests = 10;
+      ptg_row_ready = 1'b1;
+      ptg_mode = {4{1'b0}};
    endtask : sim_init
    
    task automatic set_num_test(input int n);

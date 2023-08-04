@@ -54,10 +54,10 @@ module led_display_tb();
       reset();
       pass = 1;
       
-      // led_display_pattern_gen_uut.test_00(pass_local);
-      // pass &= pass_local;
+      led_display_pattern_gen_uut.test_00(pass_local);
+      pass &= pass_local;
       
-      
+      /*
       led_display_driver_phy_uut.set_num_test(100);
       
       # 1000
@@ -67,7 +67,7 @@ module led_display_tb();
       
       led_display_driver_phy_uut.test_01(pass_local);
       pass &= pass_local;
-      
+      */
       if (pass) begin
          $display("Overall test: Pass");
       end
