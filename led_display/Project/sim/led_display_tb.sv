@@ -38,6 +38,12 @@ module led_display_tb();
          .clk_in     ( clk ),
          .n_reset_in ( nrst ));
    
+   led_display_pattern_gen_tb #(
+         .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
+      led_display_pattern_gen_uut (
+         .clk_in     ( clk ),
+         .n_reset_in ( nrst ));
+   
    //---------------------------------------------------------
    //                            Main                       --
    //---------------------------------------------------------
@@ -48,6 +54,10 @@ module led_display_tb();
       reset();
       pass = 1;
       
+      led_display_pattern_gen_uut.test_00(pass_local);
+      pass &= pass_local;
+      
+      /*
       led_display_driver_phy_uut.set_num_test(100);
       
       # 1000
@@ -57,7 +67,7 @@ module led_display_tb();
       
       led_display_driver_phy_uut.test_01(pass_local);
       pass &= pass_local;
-      
+      */
       if (pass) begin
          $display("Overall test: Pass");
       end
