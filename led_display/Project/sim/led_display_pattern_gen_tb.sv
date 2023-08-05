@@ -34,7 +34,8 @@ module led_display_pattern_gen_tb #(
    //---------------------------------------------------------
    
    led_display_pattern_gen #(
-         .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
+         .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
+         .SIMULATION          ( 1 ))
       dut (
          .clk_in              ( clk_in ),
          .n_reset_in          ( n_reset_in ),
@@ -57,6 +58,35 @@ module led_display_pattern_gen_tb #(
          drive(m);
          # 1000;
       end
+      
+      if (address_error_count != 0) begin
+         $display("Address errors: %d", address_error_count);
+      end
+      
+      if (data_error_count != 0) begin
+         $display("Data errors: %d", data_error_count);
+      end
+      
+      pass &= (address_error_count == 0);
+      pass &= (data_error_count == 0);
+      
+      if (pass) begin
+         $display("Pass");
+      end
+      else begin
+         $display("Fail");
+      end
+      
+      return;
+   endtask
+   
+   task test_01 (output bit pass);
+      $display("LED display pattern generator Test 00: Scan pattern");
+      
+      pass = 1;
+      
+      drive(7);
+      # 1000;
       
       if (address_error_count != 0) begin
          $display("Address errors: %d", address_error_count);
