@@ -85,8 +85,8 @@ module led_display_pattern_gen_tb #(
       
       pass = 1;
       
-      drive(7);
-      # 1000;
+      drive(8);
+      # 100000;
       
       if (address_error_count != 0) begin
          $display("Address errors: %d", address_error_count);

@@ -45,10 +45,13 @@ module led_display_pattern_gen #(
    
    reg [3:0] mode_buf;
    
-   reg [(GL_NUM_COL_PIXELS - 1):0]  scan_buf;
-   reg [(EFFECT_TIMER_W - 1):0]     scan_timer;
-   reg                              scan_dir;
-   reg                              scan_update;
+   reg                                 hscan_dir;
+   reg [(GL_NUM_COL_PIXELS - 1):0]     hscan_buf;
+   reg [(EFFECT_TIMER_W - 1):0]        scan_timer;
+   reg                                 scan_update;
+   
+   reg                                 vscan_dir;
+   reg [(GL_NUM_ROW_PIXELS_W - 1):0]   vscan_address;
    
    //---------------------------------------------------------
    //                   Main State Machine                  --
@@ -104,10 +107,20 @@ module led_display_pattern_gen #(
             end
             
             MODE_SCAN_H : begin
-               row.top.red <= scan_buf[(GL_NUM_COL_PIXELS - 1):0];
-               row.bot.red <= scan_buf[(GL_NUM_COL_PIXELS - 1):0];
+               row.top.red <= hscan_buf[(GL_NUM_COL_PIXELS - 1):0];
+               row.bot.red <= hscan_buf[(GL_NUM_COL_PIXELS - 1):0];
             end
             
+            MODE_SCAN_V : begin
+               if (vscan_address[4]) begin
+                  row.top.red <= {GL_NUM_COL_PIXELS{1'b0}};
+                  row.bot.red <= (row_address[3:0] == vscan_address[3:0]) ? {GL_NUM_COL_PIXELS{1'b1}} : {GL_NUM_COL_PIXELS{1'b0}};
+               end
+               else begin
+                  row.top.red <= (row_address[3:0] == vscan_address[3:0]) ? {GL_NUM_COL_PIXELS{1'b1}} : {GL_NUM_COL_PIXELS{1'b0}};
+                  row.bot.red <= {GL_NUM_COL_PIXELS{1'b0}};
+               end
+            end
          endcase
       end
    end
@@ -131,18 +144,12 @@ module led_display_pattern_gen #(
          scan_update <= 1'b0;
       end
       else begin
-         if (mode_buf == MODE_SCAN_H) begin
-            if (scan_timer >= EFFECT_TIMER) begin
-               scan_timer <= {EFFECT_TIMER_W{1'b0}};
-               scan_update <= 1'b1;
-            end
-            else begin
-               scan_timer <= scan_timer + 1'b1;
-               scan_update <= 1'b0;
-            end
+         if (scan_timer >= EFFECT_TIMER) begin
+            scan_timer <= {EFFECT_TIMER_W{1'b0}};
+            scan_update <= 1'b1;
          end
          else begin
-            scan_timer <= {EFFECT_TIMER_W{1'b0}};
+            scan_timer <= scan_timer + 1'b1;
             scan_update <= 1'b0;
          end
       end
@@ -150,28 +157,53 @@ module led_display_pattern_gen #(
    
    always_ff @(posedge clk_in) begin
       if (!n_reset_in) begin
-         scan_buf <= {{(GL_NUM_COL_PIXELS - 1){1'b0}}, 1'b1};
-         scan_dir = 1'b1;
+         hscan_buf <= {{(GL_NUM_COL_PIXELS - 1){1'b0}}, 1'b1};
+         hscan_dir = 1'b1;
       end
       else begin
          if (mode_buf == MODE_SCAN_H) begin
             if (scan_update) begin
-               if (scan_dir) begin
-                  scan_buf <= scan_buf << 1'b1;
-                  if (scan_buf & SCAN_MAX) begin
-                     scan_dir <= 1'b0;
+               if (hscan_dir) begin
+                  hscan_buf <= hscan_buf << 1'b1;
+                  if (hscan_buf & SCAN_MAX) begin
+                     hscan_dir <= 1'b0;
                   end
                end
                else begin
-                  scan_buf <= scan_buf >> 1'b1;
-                  if (scan_buf & SCAN_MIN) begin
-                     scan_dir <= 1'b1;
+                  hscan_buf <= hscan_buf >> 1'b1;
+                  if (hscan_buf & SCAN_MIN) begin
+                     hscan_dir <= 1'b1;
                   end
                end
             end
          end
          else begin
-            scan_buf <= {{(GL_NUM_COL_PIXELS - 1){1'b0}}, 1'b1};
+            hscan_buf <= {{(GL_NUM_COL_PIXELS - 1){1'b0}}, 1'b1};
+         end
+      end
+   end
+   
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         vscan_address <= {GL_NUM_ROW_PIXELS{1'b0}};
+         vscan_dir <= 1'b1;
+      end
+      else begin
+         if (mode_buf == MODE_SCAN_V) begin
+            if (scan_update) begin
+               if (vscan_dir) begin
+                  vscan_address <= vscan_address + 1'b1;
+                  if (vscan_address == (GL_NUM_ROW_PIXELS - 2)) begin
+                     vscan_dir <= 1'b0;
+                  end
+               end
+               else begin
+                  vscan_address <= vscan_address - 1'b1;
+                  if (vscan_address == 1) begin
+                     vscan_dir <= 1'b1;
+                  end
+               end
+            end
          end
       end
    end
