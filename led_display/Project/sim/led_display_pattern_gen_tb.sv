@@ -12,6 +12,8 @@ module led_display_pattern_gen_tb #(
    
    import led_display_package::*;
    
+   parameter integer VERBOSE = 0;
+   
    //---------------------------------------------------------
    //                         Signals                       --
    //---------------------------------------------------------
@@ -24,13 +26,16 @@ module led_display_pattern_gen_tb #(
    
    int num_tests;
    
+   int address_error_count;
+   int data_error_count;
+   
    //---------------------------------------------------------
    //                   UUT - Display Driver PHY            --
    //---------------------------------------------------------
    
    led_display_pattern_gen #(
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
-      led_display_driver_phy_uut (
+      dut (
          .clk_in              ( clk_in ),
          .n_reset_in          ( n_reset_in ),
          .mode_in             ( ptg_mode ),
@@ -46,13 +51,23 @@ module led_display_pattern_gen_tb #(
    task test_00 (output bit pass);
       $display("LED display pattern generator Test 00: Basic patterns");
       
-      pass = 0;
+      pass = 1;
       
       for (int m = 0; m < 7; m++) begin
          drive(m);
-         
          # 1000;
       end
+      
+      if (address_error_count != 0) begin
+         $display("Address errors: %d", address_error_count);
+      end
+      
+      if (data_error_count != 0) begin
+         $display("Data errors: %d", data_error_count);
+      end
+      
+      pass &= (address_error_count == 0);
+      pass &= (data_error_count == 0);
       
       if (pass) begin
          $display("Pass");
@@ -72,6 +87,7 @@ module led_display_pattern_gen_tb #(
       num_tests = 10;
       ptg_row_ready = 1'b1;
       ptg_mode = {4{1'b0}};
+      reset_error_counters();
    endtask : sim_init
    
    task automatic set_num_test(input int n);
@@ -85,6 +101,15 @@ module led_display_pattern_gen_tb #(
       #1step;
       return;
    endtask : sim_cycles
+   
+   task reset_error_counters();
+      address_error_count = 0;
+      data_error_count = 0;
+   endtask : reset_error_counters
+   
+   //---------------------------------------------------------
+   //                         Driver                        --
+   //---------------------------------------------------------
    
    task automatic drive(input logic [3:0] mode);
       
@@ -102,21 +127,24 @@ module led_display_pattern_gen_tb #(
       return;
    endtask : drive
    
+   //---------------------------------------------------------
+   //                      Monitors                         --
+   //---------------------------------------------------------
+   
    task static monitor_address();
       int expected = 0;
       int mode = 0;
-      int error_count = 0;
       
       sim_cycles(1);
       
       if (ptg_mode != mode) begin
          mode = ptg_mode;
          expected = 0;
-         // $display("New expected mode: %d", mode);
+         if (VERBOSE) $display("New expected mode: %d", mode);
       end
       
-      if (ptg_row_address != expected) begin
-         error_count++;
+      if (!(ptg_row_address == expected)) begin
+         address_error_count++;
          $display("Address error; Expected: %d, Read %d; Time: %t", expected, ptg_row_address, $time);
       end
       
@@ -125,7 +153,7 @@ module led_display_pattern_gen_tb #(
          if (expected == 16) begin
             expected = 0;
          end
-         // $display("New expected address: %d", expected);
+         if (VERBOSE) $display("New expected address: %d", expected);
       end
       
       return;
@@ -134,6 +162,77 @@ module led_display_pattern_gen_tb #(
    initial begin
       forever begin
          monitor_address();
+      end
+   end
+   
+   task static monitor_valid();
+      bit expected = 0;
+      // TODO
+      sim_cycles(1);
+      
+      
+   endtask : monitor_valid
+   
+   task static monitor_datastream();
+      rgb_row_t expected;
+      
+      expected = {GL_RGB_ROW_W{1'b0}};
+      sim_cycles(1);
+      case (ptg_mode)
+         dut.MODE_OFF : begin
+            expected = {GL_RGB_ROW_W{1'b0}};
+         end
+         
+         dut.MODE_SOLID_RED : begin
+            expected.top.red = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.bot.red = {GL_NUM_COL_PIXELS{1'b1}};
+         end
+         
+         dut.MODE_SOLID_GREEN : begin
+            expected.top.green = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.bot.green = {GL_NUM_COL_PIXELS{1'b1}};
+         end
+         
+         dut.MODE_SOLID_BLUE : begin
+            expected.top.blue = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.bot.blue = {GL_NUM_COL_PIXELS{1'b1}};
+         end
+         
+         dut.MODE_MIX_RG : begin
+            expected.top.red = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.bot.red = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.top.green = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.bot.green = {GL_NUM_COL_PIXELS{1'b1}};
+         end
+         
+         dut.MODE_MIX_GB : begin
+            expected.top.green = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.bot.green = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.top.blue = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.bot.blue = {GL_NUM_COL_PIXELS{1'b1}};
+         end
+         
+         dut.MODE_MIX_RB : begin
+            expected.top.red = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.bot.red = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.top.blue = {GL_NUM_COL_PIXELS{1'b1}};
+            expected.bot.blue = {GL_NUM_COL_PIXELS{1'b1}};
+         end
+      endcase
+      
+      if (ptg_row_valid) begin
+         if (!(expected == ptg_row)) begin
+            data_error_count++;
+            $display("Datastream error mode %d; Expected: %X, Read: %X", ptg_mode, expected, ptg_row);
+         end
+      end
+      
+      return;
+   endtask : monitor_datastream
+   
+   initial begin
+      forever begin
+         monitor_datastream();
       end
    end
    
