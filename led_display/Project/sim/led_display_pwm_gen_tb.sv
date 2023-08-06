@@ -28,6 +28,7 @@ module led_display_pwm_gen_tb #(
    
    pwm_generator #(
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
+         .PWM_FREQ            ( PWM_FREQ ),
          .SIMULATION          ( 1 ))
       dut (
          .clk_in              ( clk_in ),
@@ -44,6 +45,14 @@ module led_display_pwm_gen_tb #(
       
       pass = 1;
       
+      drive(0);
+      # 100000
+      
+      drive(128);
+      # 100000
+      
+      drive(255);
+      # 100000
       
       if (pass) begin
          $display("Pass");
@@ -101,9 +110,10 @@ module led_display_pwm_gen_tb #(
    //                         Driver                        --
    //---------------------------------------------------------
    
-   task automatic drive(input logic [3:0] mode);
+   task automatic drive(input logic [(BIT_W - 1):0] v);
       
       sim_cycles(1);
+      pwm_val = v;
       
       return;
    endtask : drive

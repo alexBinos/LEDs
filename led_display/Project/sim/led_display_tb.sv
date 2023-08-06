@@ -45,7 +45,8 @@ module led_display_tb();
          .n_reset_in ( nrst ));
    
    led_display_pwm_gen_tb #(
-         .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
+         .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
+         .PWM_FREQ            ( 100_000 ))
       led_display_pwm_gen_uut (
          .clk_in     ( clk ),
          .n_reset_in ( nrst ));
