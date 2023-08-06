@@ -2,8 +2,8 @@
 
 module led_display_tb();
    
-   localparam integer SYS_CLK_FREQ      = 100_000_000;                        // Basys 3 on board clock frequency (Hz)
-   localparam integer HALF_CLK_PERIOD   = 5;                                  // (ns)
+   localparam integer SYS_CLK_FREQ      = 12_500_000;                        // Basys 3 on board clock frequency (Hz)
+   localparam integer HALF_CLK_PERIOD   = 40;                                  // (ns)
    localparam integer NUM_ROW_PIXELS    = 32;                                 // Number of row pixels
    localparam integer NUM_COL_PIXELS    = 64;                                 // Number of column pixels
    localparam integer NUM_PIXELS        = NUM_ROW_PIXELS * NUM_COL_PIXELS;    // Total number of pixels in the array
@@ -51,6 +51,13 @@ module led_display_tb();
          .clk_in     ( clk ),
          .n_reset_in ( nrst ));
    
+   led_display_driver_tb #(
+         .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
+         .PWM_FREQ            ( 100_000 ))
+      led_display_driver_uut (
+         .clk_in     ( clk ),
+         .n_reset_in ( nrst ));
+   
    //---------------------------------------------------------
    //                            Main                       --
    //---------------------------------------------------------
@@ -60,6 +67,11 @@ module led_display_tb();
       
       reset();
       pass = 1;
+      
+      led_display_driver_uut.sim_init();
+      led_display_driver_uut.set_num_test(5);
+      led_display_driver_uut.test_00(pass_local);
+      pass &= pass_local;
       
       /*
       led_display_driver_phy_uut.set_num_test(100);
@@ -71,20 +83,20 @@ module led_display_tb();
       
       led_display_driver_phy_uut.test_01(pass_local);
       pass &= pass_local;
-      */
+      
       led_display_pattern_gen_uut.sim_init();
       led_display_pattern_gen_uut.set_num_test(20);
       
-      // led_display_pattern_gen_uut.test_00(pass_local);
-      // pass &= pass_local;
+      led_display_pattern_gen_uut.test_00(pass_local);
+      pass &= pass_local;
       
       // led_display_pattern_gen_uut.test_01(pass_local);
       // pass &= pass_local;
       
-      led_display_pattern_gen_uut.test_02(pass_local);
-      pass &= pass_local;
+      // led_display_pattern_gen_uut.test_02(pass_local);
+      // pass &= pass_local;
       
-      /*
+      
       led_display_pwm_gen_uut.sim_init();
       led_display_pwm_gen_uut.set_num_test(5);
       

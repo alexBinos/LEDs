@@ -23,11 +23,11 @@ module led_display_pattern_gen #(
    
    localparam integer MODE_OFF          = 0;
    localparam integer MODE_SOLID        = 1;
-   localparam integer MODE_SCAN_H       = 7;
-   localparam integer MODE_SCAN_V       = 8;
-   localparam integer MODE_PULSE        = 9;
+   localparam integer MODE_SCAN_H       = 2;
+   localparam integer MODE_SCAN_V       = 3;
+   localparam integer MODE_PULSE        = 4;
    
-   localparam integer EFFECT_TIMER      = SIMULATION ? 1000 : 1_000_000;
+   localparam integer EFFECT_TIMER      = SIMULATION ? 1000 : 100_000;
    localparam integer EFFECT_TIMER_W    = $clog2(EFFECT_TIMER + 1);
    localparam [(GL_NUM_COL_PIXELS - 1):0] SCAN_MAX = (1 << (GL_NUM_COL_PIXELS - 2));
    localparam [(GL_NUM_COL_PIXELS - 1):0] SCAN_MIN = 2;
@@ -283,7 +283,7 @@ module led_display_pattern_gen #(
          if (mode_buf != mode_in) begin
             row_address <= {4{1'b0}};
          end
-         else if (row_valid) begin
+         else if (row_valid && !row_ready_in) begin
             row_address <= row_address + 1'b1;
          end
       end
