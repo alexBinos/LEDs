@@ -29,11 +29,13 @@ module led_display_pattern_gen #(
    localparam integer MODE_MIX_RB       = 6;
    localparam integer MODE_SCAN_H       = 7;
    localparam integer MODE_SCAN_V       = 8;
+   localparam integer MODE_PULSE        = 9;
    
    localparam integer EFFECT_TIMER      = SIMULATION ? 1000 : 1_000_000;
    localparam integer EFFECT_TIMER_W    = $clog2(EFFECT_TIMER + 1);
    localparam [(GL_NUM_COL_PIXELS - 1):0] SCAN_MAX = (1 << (GL_NUM_COL_PIXELS - 2));
    localparam [(GL_NUM_COL_PIXELS - 1):0] SCAN_MIN = 2;
+   localparam integer PWM_FREQ          = SIMULATION ? 100_000 : 20_000;
    
    //---------------------------------------------------------
    //                Variables and Signals                  --
@@ -52,6 +54,11 @@ module led_display_pattern_gen #(
    
    reg                                 vscan_dir;
    reg [(GL_NUM_ROW_PIXELS_W - 1):0]   vscan_address;
+   
+   reg                                 fade_dir;
+   reg [7:0]                           fade_val;
+   wire                                pwm_colour;
+   
    
    //---------------------------------------------------------
    //                   Main State Machine                  --
@@ -121,6 +128,12 @@ module led_display_pattern_gen #(
                   row.bot.red <= {GL_NUM_COL_PIXELS{1'b0}};
                end
             end
+            
+            MODE_PULSE : begin
+               row.top.red <= {GL_NUM_COL_PIXELS{pwm_colour}};
+               row.bot.red <= {GL_NUM_COL_PIXELS{pwm_colour}};
+            end
+            
          endcase
       end
    end
@@ -207,6 +220,48 @@ module led_display_pattern_gen #(
          end
       end
    end
+   
+   //---------------------------------------------------------
+   //                   PWM Control                         --
+   //---------------------------------------------------------
+   
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         fade_val <= {8{1'b0}};
+         fade_dir <= 1'b1;
+      end
+      else begin
+         if (mode_buf == MODE_PULSE) begin
+            if (scan_update) begin
+               if (fade_dir) begin
+                  fade_val <= fade_val + 1'b1;
+                  if (fade_val >= 8'hFE) begin
+                     fade_dir <= 1'b0;
+                  end
+               end
+               else begin
+                  fade_val <= fade_val - 1'b1;
+                  if (fade_val <= 8'h01) begin
+                     fade_dir <= 1'b1;
+                  end
+               end
+            end
+         end
+         else begin
+            fade_val <= {8{1'b0}};
+         end
+      end
+   end
+   
+   pwm_generator #(
+         .SYS_CLK_FREQ     ( SYS_CLK_FREQ ),
+         .PWM_FREQ         ( PWM_FREQ ),
+         .BIT_W            ( 8 ))
+      pwm_gen (
+         .clk_in           ( clk_in ),
+         .n_reset_in       ( n_reset_in ),
+         .colour_in        ( fade_val ),
+         .pwm_colour_out   ( pwm_colour ));
    
    //---------------------------------------------------------
    //                   Output Control                      --

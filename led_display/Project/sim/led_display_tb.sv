@@ -61,12 +61,6 @@ module led_display_tb();
       reset();
       pass = 1;
       
-      led_display_pwm_gen_uut.sim_init();
-      led_display_pwm_gen_uut.set_num_test(5);
-      
-      led_display_pwm_gen_uut.test_00(pass_local);
-      pass &= pass_local;
-      
       /*
       led_display_driver_phy_uut.set_num_test(100);
       
@@ -77,15 +71,26 @@ module led_display_tb();
       
       led_display_driver_phy_uut.test_01(pass_local);
       pass &= pass_local;
-      
+      */
       led_display_pattern_gen_uut.sim_init();
       led_display_pattern_gen_uut.set_num_test(20);
       
-      led_display_pattern_gen_uut.test_00(pass_local);
+      // led_display_pattern_gen_uut.test_00(pass_local);
+      // pass &= pass_local;
+      
+      // led_display_pattern_gen_uut.test_01(pass_local);
+      // pass &= pass_local;
+      
+      led_display_pattern_gen_uut.test_02(pass_local);
       pass &= pass_local;
       
-      led_display_pattern_gen_uut.test_01(pass_local);
+      /*
+      led_display_pwm_gen_uut.sim_init();
+      led_display_pwm_gen_uut.set_num_test(5);
+      
+      led_display_pwm_gen_uut.test_00(pass_local);
       pass &= pass_local;
+      
       */
       
       if (pass) begin

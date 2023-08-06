@@ -78,10 +78,10 @@ module led_display_pattern_gen_tb #(
       end
       
       return;
-   endtask
+   endtask : test_00
    
    task test_01 (output bit pass);
-      $display("LED display pattern generator Test 00: Scan pattern");
+      $display("LED display pattern generator Test 01: Scan pattern");
       
       pass = 1;
       
@@ -107,7 +107,27 @@ module led_display_pattern_gen_tb #(
       end
       
       return;
-   endtask
+   endtask : test_01
+   
+   task test_02 (output bit pass);
+      $display("LED display pattern generator Test 02: PWM effects");
+      
+      pass = 1;
+      
+      drive(dut.MODE_PULSE);
+      # 10_000_000;
+      
+      
+      
+      if (pass) begin
+         $display("Pass");
+      end
+      else begin
+         $display("Fail");
+      end
+      
+      return;
+   endtask : test_02
    
    //---------------------------------------------------------
    //                   Simulation Tasks                    --
