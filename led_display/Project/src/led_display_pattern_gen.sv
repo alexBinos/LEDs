@@ -7,6 +7,7 @@ module led_display_pattern_gen #(
    input  wire       clk_in,
    input  wire       n_reset_in,
    
+   input  wire [2:0] colour_in,
    input  wire [3:0] mode_in,
    
    output rgb_row_t  row_out,
@@ -21,12 +22,7 @@ module led_display_pattern_gen #(
    //---------------------------------------------------------
    
    localparam integer MODE_OFF          = 0;
-   localparam integer MODE_SOLID_RED    = 1;
-   localparam integer MODE_SOLID_GREEN  = 2;
-   localparam integer MODE_SOLID_BLUE   = 3;
-   localparam integer MODE_MIX_RG       = 4;
-   localparam integer MODE_MIX_GB       = 5;
-   localparam integer MODE_MIX_RB       = 6;
+   localparam integer MODE_SOLID        = 1;
    localparam integer MODE_SCAN_H       = 7;
    localparam integer MODE_SCAN_V       = 8;
    localparam integer MODE_PULSE        = 9;
@@ -77,61 +73,56 @@ module led_display_pattern_gen #(
                row <= {GL_RGB_ROW_W{1'b0}};
             end
             
-            MODE_SOLID_RED : begin
-               row.top.red <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.bot.red <= {GL_NUM_COL_PIXELS{1'b1}};
-            end
-            
-            MODE_SOLID_GREEN : begin
-               row.top.green <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.bot.green <= {GL_NUM_COL_PIXELS{1'b1}};
-            end
-            
-            MODE_SOLID_BLUE : begin
-               row.top.blue <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.bot.blue <= {GL_NUM_COL_PIXELS{1'b1}};
-            end
-            
-            MODE_MIX_RG : begin
-               row.top.red <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.bot.red <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.top.green <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.bot.green <= {GL_NUM_COL_PIXELS{1'b1}};
-            end
-            
-            MODE_MIX_GB : begin
-               row.top.green <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.bot.green <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.top.blue <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.bot.blue <= {GL_NUM_COL_PIXELS{1'b1}};
-            end
-            
-            MODE_MIX_RB : begin
-               row.top.red <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.bot.red <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.top.blue <= {GL_NUM_COL_PIXELS{1'b1}};
-               row.bot.blue <= {GL_NUM_COL_PIXELS{1'b1}};
+            MODE_SOLID : begin
+               row.top.red     <= {GL_NUM_COL_PIXELS{colour_in[0]}};
+               row.bot.red     <= {GL_NUM_COL_PIXELS{colour_in[0]}};
+               row.top.green   <= {GL_NUM_COL_PIXELS{colour_in[1]}};
+               row.bot.green   <= {GL_NUM_COL_PIXELS{colour_in[1]}};
+               row.top.blue    <= {GL_NUM_COL_PIXELS{colour_in[2]}};
+               row.bot.blue    <= {GL_NUM_COL_PIXELS{colour_in[2]}};
             end
             
             MODE_SCAN_H : begin
-               row.top.red <= hscan_buf[(GL_NUM_COL_PIXELS - 1):0];
-               row.bot.red <= hscan_buf[(GL_NUM_COL_PIXELS - 1):0];
+               row.top.red     <= colour_in[0] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
+               row.bot.red     <= colour_in[0] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
+               row.top.green   <= colour_in[1] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
+               row.bot.green   <= colour_in[1] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
+               row.top.blue    <= colour_in[2] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
+               row.bot.blue    <= colour_in[2] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
             end
             
             MODE_SCAN_V : begin
                if (vscan_address[4]) begin
-                  row.top.red <= {GL_NUM_COL_PIXELS{1'b0}};
-                  row.bot.red <= (row_address[3:0] == vscan_address[3:0]) ? {GL_NUM_COL_PIXELS{1'b1}} : {GL_NUM_COL_PIXELS{1'b0}};
+                  row.top <= {GL_RGB_COL_W{1'b0}};
+                  if (row_address[3:0] == vscan_address[3:0]) begin
+                     row.bot.red     <= {GL_NUM_COL_PIXELS{colour_in[0]}};
+                     row.bot.green   <= {GL_NUM_COL_PIXELS{colour_in[1]}};
+                     row.bot.blue    <= {GL_NUM_COL_PIXELS{colour_in[2]}};
+                  end
+                  else begin
+                     row.bot <= {GL_RGB_COL_W{1'b0}};
+                  end
                end
                else begin
-                  row.top.red <= (row_address[3:0] == vscan_address[3:0]) ? {GL_NUM_COL_PIXELS{1'b1}} : {GL_NUM_COL_PIXELS{1'b0}};
-                  row.bot.red <= {GL_NUM_COL_PIXELS{1'b0}};
+                  row.bot <= {GL_RGB_COL_W{1'b0}};
+                  if (row_address[3:0] == vscan_address[3:0]) begin
+                     row.top.red     <= {GL_NUM_COL_PIXELS{colour_in[0]}};
+                     row.top.green   <= {GL_NUM_COL_PIXELS{colour_in[1]}};
+                     row.top.blue    <= {GL_NUM_COL_PIXELS{colour_in[2]}};
+                  end
+                  else begin
+                     row.top <= {GL_RGB_COL_W{1'b0}};
+                  end
                end
             end
             
             MODE_PULSE : begin
-               row.top.red <= {GL_NUM_COL_PIXELS{pwm_colour}};
-               row.bot.red <= {GL_NUM_COL_PIXELS{pwm_colour}};
+               row.top.red     <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[0]}} : {GL_NUM_COL_PIXELS{1'b0}};
+               row.bot.red     <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[0]}} : {GL_NUM_COL_PIXELS{1'b0}};
+               row.top.green   <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[1]}} : {GL_NUM_COL_PIXELS{1'b0}};
+               row.bot.green   <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[1]}} : {GL_NUM_COL_PIXELS{1'b0}};
+               row.top.blue    <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[2]}} : {GL_NUM_COL_PIXELS{1'b0}};
+               row.bot.blue    <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[2]}} : {GL_NUM_COL_PIXELS{1'b0}};
             end
             
          endcase

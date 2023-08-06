@@ -18,6 +18,7 @@ module led_display_pattern_gen_tb #(
    //                         Signals                       --
    //---------------------------------------------------------
    
+   logic [2:0] ptg_colour;
    logic [3:0] ptg_mode;
    rgb_row_t   ptg_row;
    logic       ptg_row_valid;
@@ -39,6 +40,7 @@ module led_display_pattern_gen_tb #(
       dut (
          .clk_in              ( clk_in ),
          .n_reset_in          ( n_reset_in ),
+         .colour_in           ( ptg_colour ),
          .mode_in             ( ptg_mode ),
          .row_out             ( ptg_row ),
          .row_valid_out       ( ptg_row_valid ),
@@ -54,9 +56,11 @@ module led_display_pattern_gen_tb #(
       
       pass = 1;
       
-      for (int m = 0; m < 7; m++) begin
-         drive(m);
-         # 1000;
+      drive(dut.MODE_OFF, 0);
+      # 1000;
+      
+      for (int i = 0; i < 8; i++) begin
+         drive(dut.MODE_SOLID, i[2:0]);
       end
       
       if (address_error_count != 0) begin
@@ -85,7 +89,8 @@ module led_display_pattern_gen_tb #(
       
       pass = 1;
       
-      drive(8);
+      // TODO: vscan
+      drive(dut.MODE_SCAN_H, 1);
       # 100000;
       
       if (address_error_count != 0) begin
@@ -114,10 +119,8 @@ module led_display_pattern_gen_tb #(
       
       pass = 1;
       
-      drive(dut.MODE_PULSE);
+      drive(dut.MODE_PULSE, 2);
       # 10_000_000;
-      
-      
       
       if (pass) begin
          $display("Pass");
@@ -137,6 +140,7 @@ module led_display_pattern_gen_tb #(
       num_tests = 10;
       ptg_row_ready = 1'b1;
       ptg_mode = {4{1'b0}};
+      ptg_colour = {3{1'b0}};
       reset_error_counters();
    endtask : sim_init
    
@@ -161,11 +165,12 @@ module led_display_pattern_gen_tb #(
    //                         Driver                        --
    //---------------------------------------------------------
    
-   task automatic drive(input logic [3:0] mode);
+   task automatic drive(input logic [3:0] mode, input logic [2:0] col);
       
       sim_cycles(1);
       ptg_row_ready = 1'b1;
       ptg_mode = mode[3:0];
+      ptg_colour = col[2:0];
       
       sim_cycles(2);
       for (int i = 0; i < num_tests; i++) begin
@@ -233,40 +238,13 @@ module led_display_pattern_gen_tb #(
             expected = {GL_RGB_ROW_W{1'b0}};
          end
          
-         dut.MODE_SOLID_RED : begin
-            expected.top.red = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.bot.red = {GL_NUM_COL_PIXELS{1'b1}};
-         end
-         
-         dut.MODE_SOLID_GREEN : begin
-            expected.top.green = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.bot.green = {GL_NUM_COL_PIXELS{1'b1}};
-         end
-         
-         dut.MODE_SOLID_BLUE : begin
-            expected.top.blue = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.bot.blue = {GL_NUM_COL_PIXELS{1'b1}};
-         end
-         
-         dut.MODE_MIX_RG : begin
-            expected.top.red = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.bot.red = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.top.green = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.bot.green = {GL_NUM_COL_PIXELS{1'b1}};
-         end
-         
-         dut.MODE_MIX_GB : begin
-            expected.top.green = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.bot.green = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.top.blue = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.bot.blue = {GL_NUM_COL_PIXELS{1'b1}};
-         end
-         
-         dut.MODE_MIX_RB : begin
-            expected.top.red = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.bot.red = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.top.blue = {GL_NUM_COL_PIXELS{1'b1}};
-            expected.bot.blue = {GL_NUM_COL_PIXELS{1'b1}};
+         dut.MODE_SOLID : begin
+            expected.top.red     <= {GL_NUM_COL_PIXELS{ptg_colour[0]}};
+            expected.bot.red     <= {GL_NUM_COL_PIXELS{ptg_colour[0]}};
+            expected.top.green   <= {GL_NUM_COL_PIXELS{ptg_colour[1]}};
+            expected.bot.green   <= {GL_NUM_COL_PIXELS{ptg_colour[1]}};
+            expected.top.blue    <= {GL_NUM_COL_PIXELS{ptg_colour[2]}};
+            expected.bot.blue    <= {GL_NUM_COL_PIXELS{ptg_colour[2]}};
          end
       endcase
       
