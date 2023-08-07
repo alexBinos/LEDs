@@ -134,7 +134,7 @@ module led_display (
    assign manual_colour[2:0]      = SW[6:4];
    assign OE                      = !latch_enable;
    assign LAT                     = latch_enable;
-   assign {D, C, B, A}            = addr[3:0];
+   assign {D, C, B, A}            = SW[11] ? SW[15:12] : addr[3:0];
    
    //---------------------------------------------------------
    //                         Debug                         --

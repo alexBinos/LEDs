@@ -99,7 +99,7 @@ module led_display_driver_tb #(
       drive(dut_ptg.MODE_OFF, 0);
       # 1000;
       
-      drive(dut_ptg.MODE_SOLID, 1);
+      drive(dut_ptg.DEBUG_V, 1);
       
       # 10_000
       

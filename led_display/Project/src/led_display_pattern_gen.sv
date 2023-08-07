@@ -26,8 +26,9 @@ module led_display_pattern_gen #(
    localparam integer MODE_SCAN_H       = 2;
    localparam integer MODE_SCAN_V       = 3;
    localparam integer MODE_PULSE        = 4;
+   localparam integer DEBUG_V           = 7;
    
-   localparam integer EFFECT_TIMER      = SIMULATION ? 1000 : 100_000;
+   localparam integer EFFECT_TIMER      = SIMULATION ? 1000 : 1_000_000;
    localparam integer EFFECT_TIMER_W    = $clog2(EFFECT_TIMER + 1);
    localparam [(GL_NUM_COL_PIXELS - 1):0] SCAN_MAX = (1 << (GL_NUM_COL_PIXELS - 2));
    localparam [(GL_NUM_COL_PIXELS - 1):0] SCAN_MIN = 2;
@@ -38,8 +39,10 @@ module led_display_pattern_gen #(
    //---------------------------------------------------------
    
    rgb_row_t   row;
+   rgb_row_t   row_buf;
    reg         row_valid;
    reg [3:0]   row_address;
+   reg [3:0]   row_address_buf;
    
    reg [3:0] mode_buf;
    
@@ -123,6 +126,11 @@ module led_display_pattern_gen #(
                row.bot.green   <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[1]}} : {GL_NUM_COL_PIXELS{1'b0}};
                row.top.blue    <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[2]}} : {GL_NUM_COL_PIXELS{1'b0}};
                row.bot.blue    <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[2]}} : {GL_NUM_COL_PIXELS{1'b0}};
+            end
+            
+            DEBUG_V : begin
+               row.top.red <= {1'b0, row_address[3:0]};
+               row.bot.red <= {1'b1, row_address[3:0]};
             end
             
          endcase
@@ -286,6 +294,15 @@ module led_display_pattern_gen #(
          else if (row_valid && !row_ready_in) begin
             row_address <= row_address + 1'b1;
          end
+      end
+   end
+   
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         row_address_buf <= {4{1'b0}};
+      end
+      else begin
+         row_address_buf <= row_address;
       end
    end
    
