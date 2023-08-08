@@ -27,7 +27,9 @@ module led_display (
    
    // Debug
    input  wire [15:0]   SW,
-   output wire [15:0]   LED_DEBUG
+   output wire [15:0]   LED_DEBUG,
+   input  wire          UART_RX,
+   output wire          UART_TX
 );
    
    //---------------------------------------------------------
@@ -54,9 +56,9 @@ module led_display (
    wire           ram_clk;
    wire           ram_enable;
    wire           ram_write_enable;
-   wire [15:0]    ram_addr;
-   wire [23:0]    ram_data_in;
-   wire [23:0]    ram_data_out;
+   wire [31:0]    ram_data_in;
+   wire [31:0]    ram_data_out;
+   wire [31:0]    ram_addr;
    
    // Display driver control
    wire [3:0]     mode;
@@ -69,10 +71,6 @@ module led_display (
    wire           row_valid;
    wire           row_ready;
    
-   wire [12:0]    ram_addr;
-   wire [63:0]    ram_dout;
-   
-   
    //---------------------------------------------------------
    //                   Clocking and Resets                 --
    //---------------------------------------------------------
@@ -81,23 +79,26 @@ module led_display (
    assign nrst = !FPGA_nRESET;
    
    //---------------------------------------------------------
-   //                   Memory Controller                  --
+   //                   CPU Subsystem                  --
    //---------------------------------------------------------
-   /*
-   frame_ram frame_ram_inst (
-      .clka    ( ram_clk ),
-      .ena     ( ram_enable ),
-      .wea     ( ram_write_enable ),
-      .addra   ( ram_addr ),
-      .dina    ( ram_data_in ),
-      .douta   ( ram_data_out ));
-   */
    
-   display_pll display_pll_inst (
-     .clk_in1  ( clk100MHz ),
-     .resetn   ( nrst ),
-     .clk_out1 ( clk20MHz ),
-     .locked   ( pll_locked ));
+   cpu_subsys_wrapper cpu (
+      .clk_in           ( clk100MHz ), 
+      .n_reset_in       ( nrst ), 
+      .clk20Mhz_out     ( clk20MHz ),
+      .sw_in_tri_i      (  ), 
+      .led_out_tri_o    (  ), 
+      .uart_rxd         ( UART_RX ),
+      .uart_txd         ( UART_TX ),
+      .frame_mem_clk    ( clk20MHz ), 
+      .frame_mem_rst    ( !nrst ), 
+      .frame_mem_addr   ( ram_addr ), 
+      .frame_mem_din    (  ), 
+      .frame_mem_dout   ( ram_data_out ), 
+      .frame_mem_en     ( 1'b1 ), 
+      .frame_mem_we     ( 1'b0 ));
+   
+   assign LED_DEBUG[3:0] = ram_data_out[3:0];
    
    //---------------------------------------------------------
    //                      Display Driver                  --
@@ -109,17 +110,17 @@ module led_display (
       .addra   ( ram_addr ),
       .dina    (  ),
       .douta   ( ram_dout ));
-   
+   */
    led_display_ram_control dut (
       .clk_in           ( clk20MHz ),
       .n_reset_in       ( nrst ),
       .ram_address_out  ( ram_addr ),
-      .ram_rdata_in     ( ram_dout ),
+      .ram_rdata_in     ( ram_data_out ),
       .row_out          ( row ),
       .row_valid_out    ( row_valid ),
       .row_address_out  ( row_addr ),
       .row_ready_in     ( row_ready ));
-   */
+   /*
    led_display_pattern_gen #(
          .SYS_CLK_FREQ        ( DISP_CLK_FREQ ),
          .SIMULATION          ( 0 ))
@@ -132,7 +133,7 @@ module led_display (
          .row_valid_out       ( row_valid ),
          .row_ready_in        ( row_ready ),
          .row_address_out     ( row_addr ));
-   
+   */
    led_display_driver_phy #(
          .SYS_CLK_FREQ        ( DISP_CLK_FREQ ))
       drv (

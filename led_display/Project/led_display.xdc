@@ -116,3 +116,9 @@ set_property IOSTANDARD LVCMOS33 [get_ports BCLK]
 set_property IOSTANDARD LVCMOS33 [get_ports LAT]
 set_property IOSTANDARD LVCMOS33 [get_ports OE]
 #set_property IOSTANDARD LVCMOS33 [get_ports {  }]
+
+#USB-RS232 Interface
+set_property PACKAGE_PIN B18 [get_ports UART_RX]
+set_property IOSTANDARD LVCMOS33 [get_ports UART_RX]
+set_property PACKAGE_PIN A18 [get_ports UART_TX]
+set_property IOSTANDARD LVCMOS33 [get_ports UART_TX]
