@@ -18,6 +18,7 @@ module led_display_driver_phy #(
    // Pixel streaming interface
    input  wire          row_valid_in,
    input  rgb_row_t     row_in,
+   input  wire [3:0]    row_address_in,
    output wire          row_ready_out,
    
    // Display control
@@ -28,7 +29,8 @@ module led_display_driver_phy #(
    output wire          red_bot_out,
    output wire          green_bot_out,
    output wire          blue_bot_out,
-   output wire          bit_clk_out
+   output wire          bit_clk_out,
+   output wire [3:0]    addr_out
 );
    
    //---------------------------------------------------------
@@ -43,6 +45,8 @@ module led_display_driver_phy #(
    
    reg [(GL_NUM_COL_PIXELS_W - 1):0]   pixel_bit_counter;
    rgb_row_t                           row_buf;
+   reg [3:0]                           row_address_buf;
+   reg [3:0]                           row_address_latch;
    reg                                 row_ready;
    reg                                 write_row;
    reg                                 latch;
@@ -55,11 +59,13 @@ module led_display_driver_phy #(
       if (!n_reset_in) begin
          row_buf <= {GL_RGB_ROW_W{1'b0}};
          row_ready <= 1'b1;
+         row_address_buf <= {4{1'b0}};
       end
       else begin
          if (row_valid_in) begin
             row_ready <= 1'b0;
             row_buf <= row_in;
+            row_address_buf <= row_address_in;
          end
          else if (pixel_bit_counter == 1'b0) begin
             row_ready <= 1'b1;
@@ -109,6 +115,17 @@ module led_display_driver_phy #(
       end
    end
    
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         row_address_latch <= {4{1'b0}};
+      end
+      else begin
+         if ((pixel_bit_counter == 0) && write_row) begin
+            row_address_latch <= (row_address_buf - 1'b1);
+         end
+      end
+   end
+   
    //---------------------------------------------------------
    //                   Output Control                      --
    //---------------------------------------------------------
@@ -122,5 +139,6 @@ module led_display_driver_phy #(
    assign bit_clk_out    = write_row ? clk_in : 1'b0;
    assign row_ready_out  = row_ready;
    assign latch_out      = latch;
+   assign addr_out       = row_address_latch;
    
 endmodule
