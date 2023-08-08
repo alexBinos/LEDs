@@ -61,12 +61,17 @@ module led_display (
    // Display driver control
    wire [3:0]     mode;
    wire [2:0]     manual_colour;
+   wire [3:0]     row_addr;
    wire [3:0]     addr;
    wire           latch_enable;
    
    rgb_row_t      row;
    wire           row_valid;
    wire           row_ready;
+   
+   wire [12:0]    ram_addr;
+   wire [63:0]    ram_dout;
+   
    
    //---------------------------------------------------------
    //                   Clocking and Resets                 --
@@ -97,7 +102,24 @@ module led_display (
    //---------------------------------------------------------
    //                      Display Driver                  --
    //---------------------------------------------------------
+   /*
+   frame_ram frame_ram_inst (
+      .clka    ( clk20MHz ),
+      .wea     ( 1'b0 ),
+      .addra   ( ram_addr ),
+      .dina    (  ),
+      .douta   ( ram_dout ));
    
+   led_display_ram_control dut (
+      .clk_in           ( clk20MHz ),
+      .n_reset_in       ( nrst ),
+      .ram_address_out  ( ram_addr ),
+      .ram_rdata_in     ( ram_dout ),
+      .row_out          ( row ),
+      .row_valid_out    ( row_valid ),
+      .row_address_out  ( row_addr ),
+      .row_ready_in     ( row_ready ));
+   */
    led_display_pattern_gen #(
          .SYS_CLK_FREQ        ( DISP_CLK_FREQ ),
          .SIMULATION          ( 0 ))
@@ -109,7 +131,7 @@ module led_display (
          .row_out             ( row ),
          .row_valid_out       ( row_valid ),
          .row_ready_in        ( row_ready ),
-         .row_address_out     ( addr ));
+         .row_address_out     ( row_addr ));
    
    led_display_driver_phy #(
          .SYS_CLK_FREQ        ( DISP_CLK_FREQ ))
@@ -120,6 +142,7 @@ module led_display (
          .row_in              ( row ),
          .row_valid_in        ( row_valid ),
          .row_ready_out       ( row_ready ),
+         .row_address_in      ( row_addr ),
          
          .latch_out           ( latch_enable ),
          .red_top_out         ( R1 ),
@@ -128,7 +151,8 @@ module led_display (
          .red_bot_out         ( R2 ),
          .green_bot_out       ( G2 ),
          .blue_bot_out        ( B2 ),
-         .bit_clk_out         ( BCLK ));
+         .bit_clk_out         ( BCLK ),
+         .addr_out            ( addr ));
    
    assign mode[3:0]               = SW[3:0];
    assign manual_colour[2:0]      = SW[6:4];

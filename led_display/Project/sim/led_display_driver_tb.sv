@@ -29,6 +29,7 @@ module led_display_driver_tb #(
    logic [2:0] drv_bit_bot;
    logic       drv_bclk;
    logic       drv_latch;
+   logic [3:0] drv_addr;
    
    int num_tests;
    
@@ -61,6 +62,7 @@ module led_display_driver_tb #(
          .row_in              ( ptg_row ),
          .row_valid_in        ( ptg_row_valid ),
          .row_ready_out       ( ptg_row_ready ),
+         .row_address_in      ( ptg_row_address ),
          
          .latch_out           ( drv_latch ),
          .red_top_out         ( drv_bit_top[0] ),
@@ -69,7 +71,8 @@ module led_display_driver_tb #(
          .red_bot_out         ( drv_bit_bot[0] ),
          .green_bot_out       ( drv_bit_bot[1] ),
          .blue_bot_out        ( drv_bit_bot[2] ),
-         .bit_clk_out         ( drv_bclk ));
+         .bit_clk_out         ( drv_bclk ),
+         .addr_out            ( drv_addr ));
    
    //---------------------------------------------------------
    //                   Sim - Display Module                --
