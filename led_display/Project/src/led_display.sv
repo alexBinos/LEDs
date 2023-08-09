@@ -92,9 +92,9 @@ module led_display (
       .uart_txd         ( UART_TX ),
       .frame_mem_clk    ( clk20MHz ), 
       .frame_mem_rst    ( !nrst ), 
-      .frame_mem_addr   ( ram_addr ), 
+      .frame_mem_addr   (  ), 
       .frame_mem_din    (  ), 
-      .frame_mem_dout   ( ram_data_out ), 
+      .frame_mem_dout   (  ), 
       .frame_mem_en     ( 1'b1 ), 
       .frame_mem_we     ( 1'b0 ));
    
@@ -103,15 +103,15 @@ module led_display (
    //---------------------------------------------------------
    //                      Display Driver                  --
    //---------------------------------------------------------
-   /*
+   
    frame_ram frame_ram_inst (
       .clka    ( clk20MHz ),
       .wea     ( 1'b0 ),
       .addra   ( ram_addr ),
       .dina    (  ),
-      .douta   ( ram_dout ));
-   */
-   led_display_ram_control dut (
+      .douta   ( ram_data_out ));
+   
+   led_display_ram_control frame_ram_control (
       .clk_in           ( clk20MHz ),
       .n_reset_in       ( nrst ),
       .ram_address_out  ( ram_addr ),
@@ -146,12 +146,12 @@ module led_display (
          .row_address_in      ( row_addr ),
          
          .latch_out           ( latch_enable ),
-         .red_top_out         ( R1 ),
-         .green_top_out       ( G1 ),
-         .blue_top_out        ( B1 ),
-         .red_bot_out         ( R2 ),
-         .green_bot_out       ( G2 ),
-         .blue_bot_out        ( B2 ),
+         .red_top_out         ( R2 ),
+         .green_top_out       ( G2 ),
+         .blue_top_out        ( B2 ),
+         .red_bot_out         ( R1 ),
+         .green_bot_out       ( G1 ),
+         .blue_bot_out        ( B1 ),
          .bit_clk_out         ( BCLK ),
          .addr_out            ( addr ));
    
