@@ -14,53 +14,133 @@ module led_display_ram_control (
    input  wire          row_ready_in
 );
    
-   reg [12:0]  ram_addr_buf;
-   reg [31:0]  ram_data_buf;
+   //---------------------------------------------------------
+   //             Local Parameters and Types                --
+   //---------------------------------------------------------
+   
+   localparam integer RAM_ADDR_W = 13;
+   localparam integer LOAD_WORDS = 12;
+   localparam integer LOAD_WORDS_HALF = (LOAD_WORDS / 2);
+   localparam integer LOAD_W     = $clog2(LOAD_WORDS);
+   
+   typedef enum logic [3:0] {
+      SS_IDLE,
+      SS_WAIT,
+      SS_LOAD,
+      SS_WAIT2,
+      SS_DONE
+   } state_t;
+   
+   //---------------------------------------------------------
+   //                Variables and Signals                  --
+   //---------------------------------------------------------
+   
+   state_t state;
+   
+   reg [(RAM_ADDR_W - 1):0]   ram_addr_buf;
+   reg [31:0]                 ram_data_buf;
    
    rgb_row_t   row_buf;
    reg         row_valid_buf;
    reg [3:0]   row_addr_buf;
    
+   reg [3:0]   count;
    
-   reg [1:0]   count;
+   //---------------------------------------------------------
+   //                   Main State Machine                  --
+   //---------------------------------------------------------
    
    always_ff @(posedge clk_in) begin
       if (!n_reset_in) begin
-         ram_addr_buf <= {13{1'b0}};
+         state <= SS_IDLE;
       end
       else begin
-         if (count == 2'b11) begin
-            ram_addr_buf <= ram_addr_buf + 1'b1;
-         end
+         case (state)
+            SS_IDLE : begin
+               if (row_ready_in && !row_valid_buf) begin
+                  state <= SS_WAIT;
+               end
+            end
+            
+            SS_WAIT : begin
+               if (count == 3'b001) begin
+                  state <= SS_LOAD;
+               end
+            end
+            
+            SS_LOAD : begin
+               if (ram_addr_buf >= (LOAD_WORDS - 2)) begin
+                  state <= SS_WAIT2;
+               end
+            end
+            
+            SS_WAIT2 : begin
+               if (count == 3'b010) begin
+                  state <= SS_DONE;
+               end
+            end
+            
+            SS_DONE : begin
+               state <= SS_IDLE;
+            end
+         endcase
       end
    end
    
+   //---------------------------------------------------------
+   //                      Buffering                        --
+   //---------------------------------------------------------
+   
+   // RAM read delay counter
    always_ff @(posedge clk_in) begin
       if (!n_reset_in) begin
-         count <= 2'b00;
+         count <= {3{1'b0}};
       end
       else begin
-         if (row_ready_in) begin
+         if ((state == SS_WAIT) || (state == SS_WAIT2)) begin
             count <= count + 1'b1;
          end
          else begin
-            count <= 2'b00;
+            count <= {3{1'b0}};
          end
       end
    end
    
+   // RAM word address counter
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         ram_addr_buf <= {RAM_ADDR_W{1'b0}};
+      end
+      else begin
+         if ((state == SS_WAIT) || (state == SS_LOAD)) begin
+            ram_addr_buf <= ram_addr_buf + 1'b1;
+         end
+         else begin
+            ram_addr_buf <= {RAM_ADDR_W{1'b0}};
+         end
+      end
+   end
+   
+   // Row buffer shift register
    always_ff @(posedge clk_in) begin
       if (!n_reset_in) begin
          row_buf <= {GL_RGB_ROW_W{1'b0}};
-         row_valid_buf <= 1'b0;
-         row_addr_buf <= {4{1'b0}};
       end
       else begin
-         if (count == 2'b11) begin
-            row_buf.top.red <= ram_rdata_in;
-            row_buf.bot.green <= ram_rdata_in;
+         if ((state == SS_LOAD) || (state == SS_WAIT2)) begin
+            row_buf[(GL_RGB_ROW_W - 1):0] <= {row_buf[(GL_RGB_ROW_W - 32):0], ram_rdata_in[31:0]};
+         end
+      end
+   end
+   
+   // Row valid control
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         row_valid_buf <= 1'b0;
+      end
+      else begin
+         if (state == SS_DONE) begin
             row_valid_buf <= 1'b1;
-            row_addr_buf <= ram_addr_buf[3:0];
          end
          else begin
             row_valid_buf <= 1'b0;
@@ -68,7 +148,19 @@ module led_display_ram_control (
       end
    end
    
-   assign ram_address_out   = ram_addr_buf[3:0];
+   // Row address counter
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         row_addr_buf <= {4{1'b0}};
+      end
+      else begin
+         if (state == SS_DONE) begin
+            row_addr_buf <= row_addr_buf + 1'b1;
+         end
+      end
+   end
+   
+   assign ram_address_out   = ram_addr_buf;
    assign row_out           = row_buf;
    assign row_valid_out     = row_valid_buf;
    assign row_address_out   = row_addr_buf;
