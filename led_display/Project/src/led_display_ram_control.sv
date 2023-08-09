@@ -6,7 +6,7 @@ module led_display_ram_control (
    input  wire          n_reset_in,
    
    output wire [12:0]   ram_address_out,
-   input  wire [63:0]   ram_rdata_in,
+   input  wire [31:0]   ram_rdata_in,
    
    output rgb_row_t     row_out,
    output wire          row_valid_out,
@@ -15,7 +15,7 @@ module led_display_ram_control (
 );
    
    reg [12:0]  ram_addr_buf;
-   reg [63:0]  ram_data_buf;
+   reg [31:0]  ram_data_buf;
    
    rgb_row_t   row_buf;
    reg         row_valid_buf;

@@ -20,8 +20,8 @@ module led_display_ram_tb #(
    
    logic          ram_write_en;
    logic [12:0]   ram_addr;
-   logic [63:0]   ram_din;
-   logic [63:0]   ram_dout;
+   logic [31:0]   ram_din;
+   logic [31:0]   ram_dout;
    
    rgb_row_t      row;
    logic [3:0]    row_addr;
