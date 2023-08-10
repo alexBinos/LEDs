@@ -18,10 +18,11 @@ module led_display_ram_control (
    //             Local Parameters and Types                --
    //---------------------------------------------------------
    
-   localparam integer RAM_ADDR_W = 32;
-   localparam integer LOAD_WORDS = 12;
-   localparam integer LOAD_WORDS_HALF = (LOAD_WORDS / 2);
-   localparam integer LOAD_W     = $clog2(LOAD_WORDS);
+   localparam integer RAM_ADDR_W        = 32;
+   localparam integer LOAD_WORDS        = 12;
+   localparam integer ADDR_WRAP         = (LOAD_WORDS * 16);
+   localparam integer LOAD_WORDS_HALF   = (LOAD_WORDS / 2);
+   localparam integer LOAD_W            = $clog2(LOAD_WORDS);
    
    typedef enum logic [3:0] {
       SS_IDLE,
@@ -45,6 +46,7 @@ module led_display_ram_control (
    reg [3:0]   row_addr_buf;
    
    reg [3:0]   count;
+   reg [(LOAD_W - 1):0] load_count;
    
    //---------------------------------------------------------
    //                   Main State Machine                  --
@@ -69,13 +71,13 @@ module led_display_ram_control (
             end
             
             SS_LOAD : begin
-               if (ram_addr_buf >= (LOAD_WORDS - 2)) begin
+               if (load_count >= (LOAD_WORDS - 1)) begin
                   state <= SS_WAIT2;
                end
             end
             
             SS_WAIT2 : begin
-               if (count == 3'b010) begin
+               if (count == 3'b001) begin
                   state <= SS_DONE;
                end
             end
@@ -115,8 +117,23 @@ module led_display_ram_control (
          if ((state == SS_WAIT) || (state == SS_LOAD)) begin
             ram_addr_buf <= ram_addr_buf + 1'b1;
          end
-         else begin
+         else if (ram_addr_buf >= ADDR_WRAP) begin
             ram_addr_buf <= {RAM_ADDR_W{1'b0}};
+         end
+      end
+   end
+   
+   // Load word counter
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         load_count <= {LOAD_W{1'b0}};
+      end
+      else begin
+         if ((state == SS_WAIT) || (state == SS_LOAD)) begin
+            load_count <= load_count + 1'b1;
+         end
+         else begin
+            load_count <= {LOAD_W{1'b0}};
          end
       end
    end

@@ -22,6 +22,7 @@ module led_display_ram_tb #(
    logic [31:0]   ram_addr;
    logic [31:0]   ram_din;
    logic [31:0]   ram_dout;
+   logic          ram_rst_busy;
    
    logic [31:0]   ram_addra;
    logic [31:0]   ram_dina;
@@ -51,21 +52,21 @@ module led_display_ram_tb #(
    //---------------------------------------------------------
    
    frame_ram frame_ram_inst (
-      .clka    ( clk_in ),
-      .rsta    ( !n_reset_in ),
-      .wea     ( ram_wena ),
-      .addra   ( ram_addra ),
-      .dina    ( ram_dina ),
-      .douta   ( ram_douta ),
+      .clka       ( clk_in ),
+      .rsta       ( !n_reset_in ),
+      .wea        ( ram_wena ),
+      .addra      ( ram_addra ),
+      .dina       ( ram_dina ),
+      .douta      ( ram_douta ),
       
-      .clkb    ( clk_in ),
-      .rstb    ( !n_reset_in ),
-      .web     ( 4'h0 ),
-      .addrb   ( {ram_addr[29:0], 2'b00} ),
-      .dinb    ( ram_din ),
-      .doutb   ( ram_dout ),
+      .clkb       ( clk_in ),
+      .rstb       ( !n_reset_in ),
+      .web        ( 4'h0 ),
+      .addrb      ( {ram_addr[29:0], 2'b00} ),
+      .dinb       ( ram_din ),
+      .doutb      ( ram_dout ),
       .rsta_busy  (  ),
-      .rstb_busy  (  ));
+      .rstb_busy  ( ram_rst_busy ));
    
    led_display_ram_control dut (
       .clk_in           ( clk_in ),
@@ -75,7 +76,7 @@ module led_display_ram_tb #(
       .row_out          ( row ),
       .row_valid_out    ( row_valid ),
       .row_address_out  ( row_addr ),
-      .row_ready_in     ( row_ready ));
+      .row_ready_in     ( (row_ready && !ram_rst_busy) ));
    
    led_display_driver_phy #(
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
@@ -115,7 +116,7 @@ module led_display_ram_tb #(
       ram_addra = 0;
       ram_dina = 32'h11111111;
       */
-      # 5000
+      # 20000
       
       if (pass) begin
          $display("Pass");
