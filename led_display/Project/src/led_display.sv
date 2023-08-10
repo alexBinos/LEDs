@@ -92,25 +92,25 @@ module led_display (
       .uart_txd         ( UART_TX ),
       .frame_mem_clk    ( clk20MHz ), 
       .frame_mem_rst    ( !nrst ), 
-      .frame_mem_addr   (  ), 
+      .frame_mem_addr   ( {ram_addr[29:0], 2'b00} ), 
       .frame_mem_din    (  ), 
-      .frame_mem_dout   (  ), 
+      .frame_mem_dout   ( ram_data_out ), 
       .frame_mem_en     ( 1'b1 ), 
-      .frame_mem_we     ( 1'b0 ));
+      .frame_mem_we     ( 4'h0 ));
    
    assign LED_DEBUG[3:0] = ram_data_out[3:0];
    
    //---------------------------------------------------------
    //                      Display Driver                  --
    //---------------------------------------------------------
-   
+   /*
    frame_ram frame_ram_inst (
       .clka    ( clk20MHz ),
       .wea     ( 1'b0 ),
       .addra   ( ram_addr ),
       .dina    (  ),
       .douta   ( ram_data_out ));
-   
+   */
    led_display_ram_control frame_ram_control (
       .clk_in           ( clk20MHz ),
       .n_reset_in       ( nrst ),

@@ -19,9 +19,16 @@ module led_display_ram_tb #(
    //---------------------------------------------------------
    
    logic          ram_write_en;
-   logic [12:0]   ram_addr;
+   logic [31:0]   ram_addr;
    logic [31:0]   ram_din;
    logic [31:0]   ram_dout;
+   
+   logic [31:0]   ram_addra;
+   logic [31:0]   ram_dina;
+   logic [31:0]   ram_douta;
+   logic [3:0]    ram_wena;
+   
+   logic ram_control_ready;
    
    rgb_row_t      row;
    logic [3:0]    row_addr;
@@ -45,10 +52,20 @@ module led_display_ram_tb #(
    
    frame_ram frame_ram_inst (
       .clka    ( clk_in ),
-      .wea     ( ram_write_en ),
-      .addra   ( ram_addr ),
-      .dina    ( ram_din ),
-      .douta   ( ram_dout ));
+      .rsta    ( !n_reset_in ),
+      .wea     ( ram_wena ),
+      .addra   ( ram_addra ),
+      .dina    ( ram_dina ),
+      .douta   ( ram_douta ),
+      
+      .clkb    ( clk_in ),
+      .rstb    ( !n_reset_in ),
+      .web     ( 4'h0 ),
+      .addrb   ( {ram_addr[29:0], 2'b00} ),
+      .dinb    ( ram_din ),
+      .doutb   ( ram_dout ),
+      .rsta_busy  (  ),
+      .rstb_busy  (  ));
    
    led_display_ram_control dut (
       .clk_in           ( clk_in ),
@@ -90,6 +107,14 @@ module led_display_ram_tb #(
       
       pass = 1;
       
+      ram_control_ready = 1'b0;
+      
+      # 100
+      /*
+      ram_wena = 4'hF;
+      ram_addra = 0;
+      ram_dina = 32'h11111111;
+      */
       # 5000
       
       if (pass) begin
@@ -109,6 +134,9 @@ module led_display_ram_tb #(
    task automatic sim_init();
       num_tests = 10;
       ram_write_en = 1'b0;
+      ram_wena = 4'h0;
+      ram_addra = {32{1'b0}};
+      ram_dina = {32{1'b0}};
       reset_error_counters();
    endtask : sim_init
    

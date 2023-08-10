@@ -5,7 +5,7 @@ module led_display_ram_control (
    input  wire          clk_in,
    input  wire          n_reset_in,
    
-   output wire [12:0]   ram_address_out,
+   output wire [31:0]   ram_address_out,
    input  wire [31:0]   ram_rdata_in,
    
    output rgb_row_t     row_out,
@@ -18,7 +18,7 @@ module led_display_ram_control (
    //             Local Parameters and Types                --
    //---------------------------------------------------------
    
-   localparam integer RAM_ADDR_W = 13;
+   localparam integer RAM_ADDR_W = 32;
    localparam integer LOAD_WORDS = 12;
    localparam integer LOAD_WORDS_HALF = (LOAD_WORDS / 2);
    localparam integer LOAD_W     = $clog2(LOAD_WORDS);
