@@ -65,9 +65,18 @@ module led_display_pattern_gen #(
    
    always_ff @(posedge clk_in) begin
       if (!n_reset_in) begin
+         mode_buf <= {4{1'b0}};
+      end
+      else begin
+         mode_buf <= mode_in;
+      end
+   end
+   
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
          row <= {GL_RGB_ROW_W{1'b0}};
       end
-      if (mode_buf != mode_in) begin
+      else if (mode_buf != mode_in) begin
          row <= {GL_RGB_ROW_W{1'b0}};
       end
       else begin
@@ -134,15 +143,6 @@ module led_display_pattern_gen #(
             end
             
          endcase
-      end
-   end
-   
-   always_ff @(posedge clk_in) begin
-      if (!n_reset_in) begin
-         mode_buf <= {4{1'b0}};
-      end
-      else begin
-         mode_buf <= mode_in;
       end
    end
    
@@ -299,7 +299,7 @@ module led_display_pattern_gen #(
    
    genvar i;
    generate
-      for (i = 0; i < 3; i++) begin :g_addr_buf
+      for (i = 0; i < 3; i++) begin : g_addr_buf
          always_ff @(posedge clk_in) begin
             if (!n_reset_in) begin
                row_address_buf[i] <= {4{1'b0}};

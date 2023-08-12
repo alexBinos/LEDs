@@ -27,6 +27,9 @@ module led_display_pattern_gen_tb #(
    
    int num_tests;
    
+   rgb_row_t row[$];
+   logic [3:0] address[$];
+   
    int address_error_count;
    int data_error_count;
    
@@ -52,27 +55,21 @@ module led_display_pattern_gen_tb #(
    //---------------------------------------------------------
    
    task test_00 (output bit pass);
+      bit pass_local;
+      pass = 1'b1;
+      
       $display("LED display pattern generator Test 00: Basic patterns");
       
-      pass = 1;
-      
       drive(dut.MODE_OFF, 0);
+      check_datastream(pass_local);
+      pass &= pass_local;
       # 1000;
       
       for (int i = 0; i < 8; i++) begin
          drive(dut.MODE_SOLID, i[2:0]);
+         check_datastream(pass_local);
+         pass &= pass_local;
       end
-      
-      if (address_error_count != 0) begin
-         $display("Address errors: %d", address_error_count);
-      end
-      
-      if (data_error_count != 0) begin
-         $display("Data errors: %d", data_error_count);
-      end
-      
-      pass &= (address_error_count == 0);
-      pass &= (data_error_count == 0);
       
       if (pass) begin
          $display("Pass");
@@ -138,9 +135,11 @@ module led_display_pattern_gen_tb #(
    
    task automatic sim_init();
       num_tests = 10;
-      ptg_row_ready = 1'b1;
+      ptg_row_ready = 1'b0;
       ptg_mode = {4{1'b0}};
       ptg_colour = {3{1'b0}};
+      row.delete();
+      address.delete();
       reset_error_counters();
    endtask : sim_init
    
@@ -172,12 +171,12 @@ module led_display_pattern_gen_tb #(
       ptg_mode = mode[3:0];
       ptg_colour = col[2:0];
       
-      sim_cycles(2);
       for (int i = 0; i < num_tests; i++) begin
-         // TODO: Random ready toggling
-         ptg_row_ready = ~ptg_row_ready;
          sim_cycles(1);
       end
+      
+      ptg_row_ready = 1'b0;
+      sim_cycles(1);
       
       return;
    endtask : drive
@@ -214,45 +213,12 @@ module led_display_pattern_gen_tb #(
       return;
    endtask : monitor_address
    
-   initial begin
-      forever begin
-         monitor_address();
-      end
-   end
-   
-   task static monitor_valid();
-      bit expected = 0;
-      // TODO
-      sim_cycles(1);
-      
-      
-   endtask : monitor_valid
-   
    task static monitor_datastream();
-      rgb_row_t expected;
       
-      expected = {GL_RGB_ROW_W{1'b0}};
       sim_cycles(1);
-      case (ptg_mode)
-         dut.MODE_OFF : begin
-            expected = {GL_RGB_ROW_W{1'b0}};
-         end
-         
-         dut.MODE_SOLID : begin
-            expected.top.red     <= {GL_NUM_COL_PIXELS{ptg_colour[0]}};
-            expected.bot.red     <= {GL_NUM_COL_PIXELS{ptg_colour[0]}};
-            expected.top.green   <= {GL_NUM_COL_PIXELS{ptg_colour[1]}};
-            expected.bot.green   <= {GL_NUM_COL_PIXELS{ptg_colour[1]}};
-            expected.top.blue    <= {GL_NUM_COL_PIXELS{ptg_colour[2]}};
-            expected.bot.blue    <= {GL_NUM_COL_PIXELS{ptg_colour[2]}};
-         end
-      endcase
-      
       if (ptg_row_valid) begin
-         if (!(expected == ptg_row)) begin
-            data_error_count++;
-            $display("Datastream error mode %d; Expected: %X, Read: %X", ptg_mode, expected, ptg_row);
-         end
+         row.push_back(ptg_row);
+         address.push_back(ptg_row_address);
       end
       
       return;
@@ -263,5 +229,36 @@ module led_display_pattern_gen_tb #(
          monitor_datastream();
       end
    end
+   
+   task automatic check_datastream(output bit pass);
+      rgb_row_t expected;
+      bit pass_local;
+      int t = row.size();
+      pass = 1'b1;
+      
+      
+      case (ptg_mode)
+         dut.MODE_OFF : begin
+            $display("Checking mode off %t", $time);
+            expected = {GL_RGB_ROW_W{1'b0}};
+         end
+         
+         dut.MODE_SOLID : begin
+            $display("Checking mode solid colour %X %t", ptg_colour, $time);
+            expected.top.red     = {GL_NUM_COL_PIXELS{ptg_colour[0]}};
+            expected.bot.red     = {GL_NUM_COL_PIXELS{ptg_colour[0]}};
+            expected.top.green   = {GL_NUM_COL_PIXELS{ptg_colour[1]}};
+            expected.bot.green   = {GL_NUM_COL_PIXELS{ptg_colour[1]}};
+            expected.top.blue    = {GL_NUM_COL_PIXELS{ptg_colour[2]}};
+            expected.bot.blue    = {GL_NUM_COL_PIXELS{ptg_colour[2]}};
+         end
+      endcase
+      
+      for (int i = 0; i < t; i++) begin
+         pass_local = (expected == row.pop_front());
+         pass &= pass_local;
+      end
+      
+   endtask : check_datastream
    
 endmodule
