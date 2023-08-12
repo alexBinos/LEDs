@@ -28,7 +28,6 @@ module led_display_pattern_gen #(
    localparam integer DEBUG_V           = 7;
    
    localparam integer EFFECT_TIMER      = SIMULATION ? 1000 : 1_000_000;
-   localparam integer EFFECT_TIMER_W    = $clog2(EFFECT_TIMER + 1);
    localparam integer PWM_FREQ          = SIMULATION ? 100_000 : 20_000;
    
    //---------------------------------------------------------
@@ -36,23 +35,16 @@ module led_display_pattern_gen #(
    //---------------------------------------------------------
    
    rgb_row_t   row;
-   rgb_row_t   row_buf;
    reg         row_valid;
    reg [3:0]   row_address;
    reg [3:0]   row_address_buf;
    
-   
-   reg [3:0] mode_buf;
+   reg [3:0]   mode_buf;
    
    rgb_row_t   row_hscan;
    rgb_row_t   row_vscan;
+   rgb_row_t   row_pulse;
    reg [3:0]   address_vscan;
-   reg [(EFFECT_TIMER_W - 1):0]        scan_timer;
-   reg                                 scan_update;
-   
-   reg                                 fade_dir;
-   reg [7:0]                           fade_val;
-   wire                                pwm_colour;
    
    //---------------------------------------------------------
    //                   Main State Machine                  --
@@ -98,12 +90,7 @@ module led_display_pattern_gen #(
             end
             
             MODE_PULSE : begin
-               row.top.red     <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[0]}} : {GL_NUM_COL_PIXELS{1'b0}};
-               row.bot.red     <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[0]}} : {GL_NUM_COL_PIXELS{1'b0}};
-               row.top.green   <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[1]}} : {GL_NUM_COL_PIXELS{1'b0}};
-               row.bot.green   <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[1]}} : {GL_NUM_COL_PIXELS{1'b0}};
-               row.top.blue    <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[2]}} : {GL_NUM_COL_PIXELS{1'b0}};
-               row.bot.blue    <= pwm_colour ? {GL_NUM_COL_PIXELS{colour_in[2]}} : {GL_NUM_COL_PIXELS{1'b0}};
+               row <= row_pulse;
             end
             
             DEBUG_V : begin
@@ -118,23 +105,6 @@ module led_display_pattern_gen #(
    //---------------------------------------------------------
    //                         Effects                       --
    //---------------------------------------------------------
-   
-   always_ff @(posedge clk_in) begin
-      if (!n_reset_in) begin
-         scan_timer <= {EFFECT_TIMER_W{1'b0}};
-         scan_update <= 1'b0;
-      end
-      else begin
-         if (scan_timer >= EFFECT_TIMER) begin
-            scan_timer <= {EFFECT_TIMER_W{1'b0}};
-            scan_update <= 1'b1;
-         end
-         else begin
-            scan_timer <= scan_timer + 1'b1;
-            scan_update <= 1'b0;
-         end
-      end
-   end
    
    pattern_hscan #(
          .EFFECT_TIMER  ( EFFECT_TIMER ),
@@ -154,47 +124,15 @@ module led_display_pattern_gen #(
          .row_out          ( row_vscan ),
          .row_address_out  ( address_vscan ));
    
-   //---------------------------------------------------------
-   //                   PWM Control                         --
-   //---------------------------------------------------------
-   
-   always_ff @(posedge clk_in) begin
-      if (!n_reset_in) begin
-         fade_val <= {8{1'b0}};
-         fade_dir <= 1'b1;
-      end
-      else begin
-         if (mode_buf == MODE_PULSE) begin
-            if (scan_update) begin
-               if (fade_dir) begin
-                  fade_val <= fade_val + 1'b1;
-                  if (fade_val >= 8'hFE) begin
-                     fade_dir <= 1'b0;
-                  end
-               end
-               else begin
-                  fade_val <= fade_val - 1'b1;
-                  if (fade_val <= 8'h01) begin
-                     fade_dir <= 1'b1;
-                  end
-               end
-            end
-         end
-         else begin
-            fade_val <= {8{1'b0}};
-         end
-      end
-   end
-   
-   pwm_generator #(
-         .SYS_CLK_FREQ     ( SYS_CLK_FREQ ),
-         .PWM_FREQ         ( PWM_FREQ ),
-         .BIT_W            ( 8 ))
-      pwm_gen (
+   pattern_pulse #(
+         .SYS_CLK_FREQ  ( SYS_CLK_FREQ ),
+         .PWM_FREQ      ( PWM_FREQ ),
+         .EFFECT_TIMER  ( EFFECT_TIMER ))
+      pulse (
          .clk_in           ( clk_in ),
          .n_reset_in       ( n_reset_in ),
-         .colour_in        ( fade_val ),
-         .pwm_colour_out   ( pwm_colour ));
+         .colour_in        ( colour_in ),
+         .row_out          ( row_pulse ));
    
    //---------------------------------------------------------
    //                   Output Control                      --
