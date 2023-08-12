@@ -68,7 +68,7 @@ module led_display_driver_phy_tb #(
    display_sim #(
          .NUM_COLS   ( NUM_COL_PIXELS ),
          .NUM_ROWS   ( NUM_ROW_PIXELS ),
-         .VERBOSE    ( 1 ))
+         .VERBOSE    ( 0 ))
       display_sim_inst (
          .bclk       ( drv_bclk ),
          .rgb_top    ( drv_bit_top ),
@@ -85,8 +85,6 @@ module led_display_driver_phy_tb #(
       $display("LED display driver PHY Test 00: Basic vectors");
       
       display_sim_inst.reset();
-      
-      $display("Running %d", num_tests);
       
       sim_load_frame(p_test);
       driver_write_phy();
@@ -139,6 +137,7 @@ module led_display_driver_phy_tb #(
    
    task automatic set_num_test(input int n);
       num_tests = n;
+      $display("Set number of tests to %d", num_tests);
    endtask : set_num_test
    
    task automatic sim_load_frame(input pattern_t p);

@@ -44,7 +44,7 @@ module display_sim #(
    task update_queue();
       frame.push_back(pxl);
       if (VERBOSE) begin
-         $display("Row received: Addr: %h, Top: %h, Bottom: %h at time %t", addr, pxl.top, pxl.bot, $time);
+         $display("Row received: Addr: %h, Top: %h, Bottom: %h at time %t", addr_in, pxl.top, pxl.bot, $time);
       end
    endtask : update_queue
    
