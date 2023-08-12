@@ -41,9 +41,11 @@ module led_display_pattern_gen #(
    
    reg [3:0]   mode_buf;
    
+   rgb_row_t   row_solid;
    rgb_row_t   row_hscan;
    rgb_row_t   row_vscan;
    rgb_row_t   row_pulse;
+   rgb_row_t   row_debugv;
    reg [3:0]   address_vscan;
    
    //---------------------------------------------------------
@@ -73,12 +75,7 @@ module led_display_pattern_gen #(
             end
             
             MODE_SOLID : begin
-               row.top.red     <= {GL_NUM_COL_PIXELS{colour_in[0]}};
-               row.bot.red     <= {GL_NUM_COL_PIXELS{colour_in[0]}};
-               row.top.green   <= {GL_NUM_COL_PIXELS{colour_in[1]}};
-               row.bot.green   <= {GL_NUM_COL_PIXELS{colour_in[1]}};
-               row.top.blue    <= {GL_NUM_COL_PIXELS{colour_in[2]}};
-               row.bot.blue    <= {GL_NUM_COL_PIXELS{colour_in[2]}};
+               row <= row_solid;
             end
             
             MODE_SCAN_H : begin
@@ -94,8 +91,7 @@ module led_display_pattern_gen #(
             end
             
             DEBUG_V : begin
-               row.top.red <= {1'b0, row_address[3:0]};
-               row.bot.red <= {1'b1, row_address[3:0]};
+               row <= row_debugv;
             end
             
          endcase
@@ -105,6 +101,20 @@ module led_display_pattern_gen #(
    //---------------------------------------------------------
    //                         Effects                       --
    //---------------------------------------------------------
+   
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         row_solid <= {GL_RGB_ROW_W{1'b0}};
+      end
+      else begin
+         row_solid.top.red     <= {GL_NUM_COL_PIXELS{colour_in[0]}};
+         row_solid.bot.red     <= {GL_NUM_COL_PIXELS{colour_in[0]}};
+         row_solid.top.green   <= {GL_NUM_COL_PIXELS{colour_in[1]}};
+         row_solid.bot.green   <= {GL_NUM_COL_PIXELS{colour_in[1]}};
+         row_solid.top.blue    <= {GL_NUM_COL_PIXELS{colour_in[2]}};
+         row_solid.bot.blue    <= {GL_NUM_COL_PIXELS{colour_in[2]}};
+      end
+   end
    
    pattern_hscan #(
          .EFFECT_TIMER  ( EFFECT_TIMER ),
@@ -133,6 +143,16 @@ module led_display_pattern_gen #(
          .n_reset_in       ( n_reset_in ),
          .colour_in        ( colour_in ),
          .row_out          ( row_pulse ));
+   
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         row_debugv <= {GL_RGB_ROW_W{1'b0}};
+      end
+      else begin
+         row_debugv.top.red <= {1'b0, row_address[3:0]};
+         row_debugv.bot.red <= {1'b1, row_address[3:0]};
+      end
+   end
    
    //---------------------------------------------------------
    //                   Output Control                      --
