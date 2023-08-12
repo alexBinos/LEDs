@@ -39,22 +39,20 @@ module led_display_pattern_gen #(
    rgb_row_t   row_buf;
    reg         row_valid;
    reg [3:0]   row_address;
-   reg [2:0][3:0]   row_address_buf;
+   reg [3:0]   row_address_buf;
    
    
    reg [3:0] mode_buf;
    
    rgb_row_t   row_hscan;
+   rgb_row_t   row_vscan;
+   reg [3:0]   address_vscan;
    reg [(EFFECT_TIMER_W - 1):0]        scan_timer;
    reg                                 scan_update;
-   
-   reg                                 vscan_dir;
-   reg [(GL_NUM_ROW_PIXELS_W - 1):0]   vscan_address;
    
    reg                                 fade_dir;
    reg [7:0]                           fade_val;
    wire                                pwm_colour;
-   
    
    //---------------------------------------------------------
    //                   Main State Machine                  --
@@ -96,28 +94,7 @@ module led_display_pattern_gen #(
             end
             
             MODE_SCAN_V : begin
-               if (vscan_address[4]) begin
-                  row.top <= {GL_RGB_COL_W{1'b0}};
-                  if (row_address[3:0] == vscan_address[3:0]) begin
-                     row.bot.red     <= {GL_NUM_COL_PIXELS{colour_in[0]}};
-                     row.bot.green   <= {GL_NUM_COL_PIXELS{colour_in[1]}};
-                     row.bot.blue    <= {GL_NUM_COL_PIXELS{colour_in[2]}};
-                  end
-                  else begin
-                     row.bot <= {GL_RGB_COL_W{1'b0}};
-                  end
-               end
-               else begin
-                  row.bot <= {GL_RGB_COL_W{1'b0}};
-                  if (row_address[3:0] == vscan_address[3:0]) begin
-                     row.top.red     <= {GL_NUM_COL_PIXELS{colour_in[0]}};
-                     row.top.green   <= {GL_NUM_COL_PIXELS{colour_in[1]}};
-                     row.top.blue    <= {GL_NUM_COL_PIXELS{colour_in[2]}};
-                  end
-                  else begin
-                     row.top <= {GL_RGB_COL_W{1'b0}};
-                  end
-               end
+               row <= row_vscan;
             end
             
             MODE_PULSE : begin
@@ -159,33 +136,6 @@ module led_display_pattern_gen #(
       end
    end
    
-   always_ff @(posedge clk_in) begin
-      if (!n_reset_in) begin
-         vscan_address <= {GL_NUM_ROW_PIXELS{1'b0}};
-         vscan_dir <= 1'b1;
-      end
-      else begin
-         if (mode_buf == MODE_SCAN_V) begin
-            if (scan_update) begin
-               if (vscan_dir) begin
-                  vscan_address <= vscan_address + 1'b1;
-                  if (vscan_address == (GL_NUM_ROW_PIXELS - 2)) begin
-                     vscan_dir <= 1'b0;
-                  end
-               end
-               else begin
-                  vscan_address <= vscan_address - 1'b1;
-                  if (vscan_address == 1) begin
-                     vscan_dir <= 1'b1;
-                  end
-               end
-            end
-         end
-      end
-   end
-   
-   
-   
    pattern_hscan #(
          .EFFECT_TIMER  ( EFFECT_TIMER ),
          .SIMULATION    ( SIMULATION ))
@@ -194,6 +144,15 @@ module led_display_pattern_gen #(
          .n_reset_in    ( n_reset_in ),
          .colour_in     ( colour_in ),
          .row_out       ( row_hscan ));
+   
+   pattern_vscan #(
+         .EFFECT_TIMER  ( EFFECT_TIMER ))
+      vscan (
+         .clk_in           ( clk_in ),
+         .n_reset_in       ( n_reset_in ),
+         .colour_in        ( colour_in ),
+         .row_out          ( row_vscan ),
+         .row_address_out  ( address_vscan ));
    
    //---------------------------------------------------------
    //                   PWM Control                         --
@@ -272,29 +231,22 @@ module led_display_pattern_gen #(
       end
    end
    
-   genvar i;
-   generate
-      for (i = 0; i < 3; i++) begin : g_addr_buf
-         always_ff @(posedge clk_in) begin
-            if (!n_reset_in) begin
-               row_address_buf[i] <= {4{1'b0}};
-            end
-            else begin
-               if (i == 0) begin
-                  row_address_buf[i][3:0] <= row_address[3:0];
-               end
-               else begin
-                  row_address_buf[i][3:0] <= row_address_buf[i - 1][3:0];
-               end
-            end
+   always_ff @(posedge clk_in) begin
+      if (!n_reset_in) begin
+         row_address_buf <= {4{1'b0}};
+      end
+      else begin
+         if (mode_buf == MODE_SCAN_V) begin
+            row_address_buf <= address_vscan;
+         end
+         else begin
+            row_address_buf <= row_address;
          end
       end
-   endgenerate
-   
-   
+   end
    
    assign row_valid_out = row_valid;
    assign row_out = row;
-   assign row_address_out[3:0] = row_address_buf[2][3:0];
+   assign row_address_out[3:0] = row_address_buf[3:0];
    
 endmodule

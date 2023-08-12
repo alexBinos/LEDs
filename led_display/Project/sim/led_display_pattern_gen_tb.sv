@@ -87,7 +87,7 @@ module led_display_pattern_gen_tb #(
       pass = 1;
       
       // TODO: vscan
-      drive(dut.MODE_SCAN_H, 1);
+      drive(dut.MODE_SCAN_V, 1);
       # 1000000;
       
       if (pass) begin
