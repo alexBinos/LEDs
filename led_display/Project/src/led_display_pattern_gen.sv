@@ -29,8 +29,6 @@ module led_display_pattern_gen #(
    
    localparam integer EFFECT_TIMER      = SIMULATION ? 1000 : 1_000_000;
    localparam integer EFFECT_TIMER_W    = $clog2(EFFECT_TIMER + 1);
-   localparam [(GL_NUM_COL_PIXELS - 1):0] SCAN_MAX = (1 << (GL_NUM_COL_PIXELS - 2));
-   localparam [(GL_NUM_COL_PIXELS - 1):0] SCAN_MIN = 2;
    localparam integer PWM_FREQ          = SIMULATION ? 100_000 : 20_000;
    
    //---------------------------------------------------------
@@ -46,8 +44,7 @@ module led_display_pattern_gen #(
    
    reg [3:0] mode_buf;
    
-   reg                                 hscan_dir;
-   reg [(GL_NUM_COL_PIXELS - 1):0]     hscan_buf;
+   rgb_row_t   row_hscan;
    reg [(EFFECT_TIMER_W - 1):0]        scan_timer;
    reg                                 scan_update;
    
@@ -95,12 +92,7 @@ module led_display_pattern_gen #(
             end
             
             MODE_SCAN_H : begin
-               row.top.red     <= colour_in[0] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
-               row.bot.red     <= colour_in[0] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
-               row.top.green   <= colour_in[1] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
-               row.bot.green   <= colour_in[1] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
-               row.top.blue    <= colour_in[2] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
-               row.bot.blue    <= colour_in[2] ? hscan_buf[(GL_NUM_COL_PIXELS - 1):0] : {GL_NUM_COL_PIXELS{1'b0}};
+               row <= row_hscan;
             end
             
             MODE_SCAN_V : begin
@@ -169,34 +161,6 @@ module led_display_pattern_gen #(
    
    always_ff @(posedge clk_in) begin
       if (!n_reset_in) begin
-         hscan_buf <= {{(GL_NUM_COL_PIXELS - 1){1'b0}}, 1'b1};
-         hscan_dir = 1'b1;
-      end
-      else begin
-         if (mode_buf == MODE_SCAN_H) begin
-            if (scan_update) begin
-               if (hscan_dir) begin
-                  hscan_buf <= hscan_buf << 1'b1;
-                  if (hscan_buf & SCAN_MAX) begin
-                     hscan_dir <= 1'b0;
-                  end
-               end
-               else begin
-                  hscan_buf <= hscan_buf >> 1'b1;
-                  if (hscan_buf & SCAN_MIN) begin
-                     hscan_dir <= 1'b1;
-                  end
-               end
-            end
-         end
-         else begin
-            hscan_buf <= {{(GL_NUM_COL_PIXELS - 1){1'b0}}, 1'b1};
-         end
-      end
-   end
-   
-   always_ff @(posedge clk_in) begin
-      if (!n_reset_in) begin
          vscan_address <= {GL_NUM_ROW_PIXELS{1'b0}};
          vscan_dir <= 1'b1;
       end
@@ -219,6 +183,17 @@ module led_display_pattern_gen #(
          end
       end
    end
+   
+   
+   
+   pattern_hscan #(
+         .EFFECT_TIMER  ( EFFECT_TIMER ),
+         .SIMULATION    ( SIMULATION ))
+      hscan (
+         .clk_in        ( clk_in ),
+         .n_reset_in    ( n_reset_in ),
+         .colour_in     ( colour_in ),
+         .row_out       ( row_hscan ));
    
    //---------------------------------------------------------
    //                   PWM Control                         --
