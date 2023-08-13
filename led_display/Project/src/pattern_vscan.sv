@@ -111,17 +111,6 @@ module pattern_vscan #(
       end
       else begin
          if (scan_addr[4]) begin
-            row_buf.top <= {GL_RGB_COL_W{1'b0}};
-            if (address_counter[3:0] == scan_addr[3:0]) begin
-               row_buf.bot.red    <= {GL_NUM_COL_PIXELS{colour_in[0]}};
-               row_buf.bot.green  <= {GL_NUM_COL_PIXELS{colour_in[1]}};
-               row_buf.bot.blue   <= {GL_NUM_COL_PIXELS{colour_in[2]}};
-            end
-            else begin
-               row_buf.bot <= {GL_RGB_COL_W{1'b0}};
-            end
-         end
-         else begin
             row_buf.bot <= {GL_RGB_COL_W{1'b0}};
             if (address_counter[3:0] == scan_addr[3:0]) begin
                row_buf.top.red    <= {GL_NUM_COL_PIXELS{colour_in[0]}};
@@ -130,6 +119,17 @@ module pattern_vscan #(
             end
             else begin
                row_buf.top <= {GL_RGB_COL_W{1'b0}};
+            end
+         end
+         else begin
+            row_buf.top <= {GL_RGB_COL_W{1'b0}};
+            if (address_counter[3:0] == scan_addr[3:0]) begin
+               row_buf.bot.red    <= {GL_NUM_COL_PIXELS{colour_in[0]}};
+               row_buf.bot.green  <= {GL_NUM_COL_PIXELS{colour_in[1]}};
+               row_buf.bot.blue   <= {GL_NUM_COL_PIXELS{colour_in[2]}};
+            end
+            else begin
+               row_buf.bot <= {GL_RGB_COL_W{1'b0}};
             end
          end
       end

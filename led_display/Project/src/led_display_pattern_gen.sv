@@ -28,6 +28,7 @@ module led_display_pattern_gen #(
    localparam integer DEBUG_V           = 7;
    
    localparam integer EFFECT_TIMER      = SIMULATION ? 1000 : 1_000_000;
+   localparam integer VSCAN_T           = SIMULATION ? 1000 : 10_000_000;
    localparam integer PWM_FREQ          = SIMULATION ? 100_000 : 20_000;
    
    //---------------------------------------------------------
@@ -126,7 +127,7 @@ module led_display_pattern_gen #(
          .row_out       ( row_hscan ));
    
    pattern_vscan #(
-         .EFFECT_TIMER  ( EFFECT_TIMER ))
+         .EFFECT_TIMER  ( VSCAN_T ))
       vscan (
          .clk_in           ( clk_in ),
          .n_reset_in       ( n_reset_in ),
