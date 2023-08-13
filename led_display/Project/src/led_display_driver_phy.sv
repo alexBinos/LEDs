@@ -30,7 +30,7 @@ module led_display_driver_phy #(
    output wire          green_bot_out,
    output wire          blue_bot_out,
    output wire          bit_clk_out,
-   output wire [3:0]    addr_out
+   output wire [3:0]    address_out
 );
    
    //---------------------------------------------------------
@@ -139,6 +139,6 @@ module led_display_driver_phy #(
    assign bit_clk_out    = write_row ? clk_in : 1'b0;
    assign row_ready_out  = row_ready;
    assign latch_out      = latch;
-   assign addr_out       = row_address_latch;
+   assign address_out    = row_address_buf;
    
 endmodule

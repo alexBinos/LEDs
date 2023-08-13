@@ -23,16 +23,19 @@ module led_display_driver_phy_tb #(
    //                         Signals                       --
    //---------------------------------------------------------
    
-   logic          drv_valid;
-   logic          drv_done;
-   logic          drv_ready;
-   rgb_row_t      drv_row;
+   logic          row_valid;
+   logic          row_ready;
+   logic [3:0]    row_address;
+   rgb_row_t      row;
+   
    logic [2:0]    drv_bit_top;
    logic [2:0]    drv_bit_bot;
    logic          drv_bclk;
    logic          drv_latch;
+   logic [3:0]    drv_address;
    
-   rgb_row_t frame[$];
+   rgb_row_t      frame[$];
+   logic [3:0]    address[$];
    
    int num_tests;
    
@@ -44,13 +47,14 @@ module led_display_driver_phy_tb #(
          .WRITE_FREQ          ( BCLK_FREQ ),
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
          .NUM_COLS            ( NUM_COL_PIXELS ))
-      led_display_driver_phy_uut (
+      dut (
          .clk_in              ( clk_in ),
          .n_reset_in          ( n_reset_in ),
          
-         .row_valid_in        ( drv_valid ),
-         .row_in              ( drv_row ),
-         .row_ready_out       ( drv_ready ),
+         .row_valid_in        ( row_valid ),
+         .row_in              ( row ),
+         .row_address_in      ( row_address ),
+         .row_ready_out       ( row_ready ),
          
          .latch_out           ( drv_latch ),
          .red_top_out         ( drv_bit_top[0] ),
@@ -59,7 +63,8 @@ module led_display_driver_phy_tb #(
          .red_bot_out         ( drv_bit_bot[0] ),
          .green_bot_out       ( drv_bit_bot[1] ),
          .blue_bot_out        ( drv_bit_bot[2] ),
-         .bit_clk_out         ( drv_bclk ));
+         .bit_clk_out         ( drv_bclk ),
+         .address_out         ( drv_address ));
    
    //---------------------------------------------------------
    //                   Sim - Display Module                --
@@ -73,7 +78,7 @@ module led_display_driver_phy_tb #(
          .bclk       ( drv_bclk ),
          .rgb_top    ( drv_bit_top ),
          .rgb_bot    ( drv_bit_bot ),
-         .addr_in    ( 4'h0 ),
+         .addr_in    ( drv_address ),
          .oe_in      (  ),
          .le_in      ( drv_latch ));
    
@@ -86,7 +91,7 @@ module led_display_driver_phy_tb #(
       
       display_sim_inst.reset();
       
-      sim_load_frame(p_test);
+      sim_load_frame(p_count);
       driver_write_phy();
       sim_check_frame(pass);
       
@@ -133,6 +138,12 @@ module led_display_driver_phy_tb #(
    
    task automatic sim_init();
       num_tests = 10;
+      row_valid = 1'b0;
+      row = {GL_RGB_ROW_W{1'b0}};
+      row_address <= {4{1'b0}};
+      frame.delete();
+      address.delete();
+      display_sim_inst.reset();
    endtask : sim_init
    
    task automatic set_num_test(input int n);
@@ -140,8 +151,17 @@ module led_display_driver_phy_tb #(
       $display("Set number of tests to %d", num_tests);
    endtask : set_num_test
    
+   task automatic sim_cycles(int n);
+      repeat (n) begin
+         @(posedge clk_in);
+      end
+      #1step;
+      return;
+   endtask : sim_cycles
+   
    task automatic sim_load_frame(input pattern_t p);
       rgb_row_t t;
+      int addr = 0;
       
       case (p)
          p_count : begin
@@ -153,6 +173,8 @@ module led_display_driver_phy_tb #(
                t.bot.green   = i;
                t.bot.blue    = i;
                frame.push_back(t);
+               address.push_back(addr[3:0]);
+               addr++;
             end
          end
          
@@ -165,6 +187,8 @@ module led_display_driver_phy_tb #(
                t.bot.green   = (1 << i);
                t.bot.blue    = (1 << i);
                frame.push_back(t);
+               address.push_back(addr[3:0]);
+               addr++;
             end
          end
          
@@ -172,6 +196,8 @@ module led_display_driver_phy_tb #(
             for (int i = 0; i < num_tests; i++) begin
                std::randomize(t);
                frame.push_back(t);
+               address.push_back(addr[3:0]);
+               addr++;
             end
          end
          
@@ -184,6 +210,8 @@ module led_display_driver_phy_tb #(
                t.bot.green   = 64'h80000000_00000001;
                t.bot.blue    = 64'h80000000_00000001;
                frame.push_back(t);
+               address.push_back(addr[3:0]);
+               addr++;
             end
          end
          
@@ -193,18 +221,35 @@ module led_display_driver_phy_tb #(
    endtask : sim_load_frame
    
    task automatic sim_check_frame(output bit pass);
-      rgb_row_t phy_frame;
-      rgb_row_t display_frame;
-      bit pass_local = 1;
-      bit test;
+      rgb_row_t      phy_frame;
+      rgb_row_t      display_frame;
+      logic [3:0]    phy_addr;
+      logic [3:0]    display_addr;
+      bit            pass_local = 1;
+      bit            test;
       
       int s = frame.size();
+      
+      test = (frame.size() == address.size());
+      pass_local &= test;
+      assert(test) else begin
+         $display("Frame and address size mismatch: %d ;; %d", frame.size(), address.size());
+         return;
+      end
       
       for (int i = 0; i < s; i++) begin
          phy_frame = frame.pop_front();
          display_frame = display_sim_inst.frame.pop_front();
          test = (phy_frame == display_frame);
          assert(test) else $display("Frame error: %X ;; %X", phy_frame, display_frame);
+         pass_local &= test;
+      end
+      
+      for (int i = 0; i < s; i++) begin
+         phy_addr = address.pop_front();
+         display_addr = display_sim_inst.address.pop_front();
+         test = (phy_addr == display_addr);
+         assert(test) else $display("Address error: %X ;; %X", phy_addr, display_addr);
          pass_local &= test;
       end
       
@@ -217,42 +262,34 @@ module led_display_driver_phy_tb #(
       int s = frame.size();
       
       for (int i = 0; i < s; i++) begin
-         driver_write_row(frame[i]);
+         driver_wait_for_ready();
+      
+         row = frame[i];
+         row_address = address[i];
+         row_valid = 1'b0;
+         sim_cycles(1);
+         row_valid = 1'b1;
+         sim_cycles(1);
+         row_valid = 1'b0;
+         
       end
       
-      # 10000
+      driver_wait_for_ready();
       
       return;
    endtask : driver_write_phy
    
-   task automatic driver_write_row(
-         input rgb_row_t pxl);
-      
-      driver_wait_for_ready();
-      
-      drv_row = pxl;
-      
-      drv_valid = 1'b0;
-      @(posedge clk_in);
-      drv_valid = 1'b1;
-      @(posedge clk_in);
-      drv_valid = 1'b0;
-      
-      return;
-   endtask : driver_write_row
-   
    task automatic driver_wait_for_ready();
       int timeout = 0;
-      do 
-      begin
-         @(posedge clk_in);
+      do begin
+         sim_cycles(1);
          timeout++;
          if (timeout > 1000000) begin
             $warning("Display driver took too long to complete");
             break;
          end
       end
-      while(!drv_ready);
+      while(!row_ready);
       
       return;
    endtask : driver_wait_for_ready

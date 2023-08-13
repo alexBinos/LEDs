@@ -23,6 +23,7 @@ module display_sim #(
    
    rgb_row_t pxl;
    rgb_row_t frame[$];
+   logic [3:0] address[$];
    
    initial begin : shift_reg
       forever begin
@@ -34,6 +35,7 @@ module display_sim #(
          pxl.bot.red     <= {pxl.bot.red[(NUM_COLS - 2):0], rgb_bot[0]};
          pxl.bot.green   <= {pxl.bot.green[(NUM_COLS - 2):0], rgb_bot[1]};
          pxl.bot.blue    <= {pxl.bot.blue[(NUM_COLS - 2):0], rgb_bot[2]};
+         addr            <= addr_in;
       end
    end : shift_reg
    
@@ -43,13 +45,16 @@ module display_sim #(
    
    task update_queue();
       frame.push_back(pxl);
+      address.push_back(addr);
       if (VERBOSE) begin
-         $display("Row received: Addr: %h, Top: %h, Bottom: %h at time %t", addr_in, pxl.top, pxl.bot, $time);
+         $display("Row received: Addr: %h, Top: %h, Bottom: %h at time %t", addr, pxl.top, pxl.bot, $time);
       end
    endtask : update_queue
    
    task reset();
       pxl = {GL_RGB_ROW_W{1'b0}};
+      frame.delete();
+      address.delete();
    endtask : reset
    
 endmodule
