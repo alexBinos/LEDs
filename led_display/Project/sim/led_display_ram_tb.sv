@@ -12,17 +12,16 @@ module led_display_ram_tb #(
    
    import led_display_package::*;
    
-   parameter integer VERBOSE = 0;
+   parameter integer VERBOSE = 1;
    
    //---------------------------------------------------------
    //                         Signals                       --
    //---------------------------------------------------------
    
-   logic          ram_write_en;
-   logic [31:0]   ram_addr;
-   logic [31:0]   ram_din;
-   logic [31:0]   ram_dout;
-   logic          ram_rst_busy;
+   logic [31:0]   ram_addrb;
+   logic [31:0]   ram_dinb;
+   logic [31:0]   ram_doutb;
+   logic          ram_rstb_busy;
    
    logic [31:0]   ram_addra;
    logic [31:0]   ram_dina;
@@ -40,7 +39,7 @@ module led_display_ram_tb #(
    logic [2:0] drv_bit_bot;
    logic       drv_bclk;
    logic       drv_latch;
-   logic [3:0] drv_addr;
+   logic [3:0] drv_address;
    
    int num_tests;
    
@@ -48,9 +47,9 @@ module led_display_ram_tb #(
    int data_error_count;
    
    //---------------------------------------------------------
-   //                   UUT - Display Driver PHY            --
+   //                         Frame RAM                     --
    //---------------------------------------------------------
-   
+    
    frame_ram frame_ram_inst (
       .clka       ( clk_in ),
       .rsta       ( !n_reset_in ),
@@ -62,25 +61,33 @@ module led_display_ram_tb #(
       .clkb       ( clk_in ),
       .rstb       ( !n_reset_in ),
       .web        ( 4'h0 ),
-      .addrb      ( {ram_addr[29:0], 2'b00} ),
-      .dinb       ( ram_din ),
-      .doutb      ( ram_dout ),
+      .addrb      ( {ram_addrb[29:0], 2'b00} ),
+      .dinb       ( ram_dinb ),
+      .doutb      ( ram_doutb ),
       .rsta_busy  (  ),
-      .rstb_busy  ( ram_rst_busy ));
+      .rstb_busy  ( ram_rstb_busy )); 
+    
+   //---------------------------------------------------------
+   //             DUT - LED Display RAM Controller          --
+   //---------------------------------------------------------
    
    led_display_ram_control dut (
       .clk_in           ( clk_in ),
       .n_reset_in       ( n_reset_in ),
-      .ram_address_out  ( ram_addr ),
-      .ram_rdata_in     ( ram_dout ),
+      .ram_address_out  ( ram_addrb ),
+      .ram_rdata_in     ( ram_doutb ),
       .row_out          ( row ),
       .row_valid_out    ( row_valid ),
       .row_address_out  ( row_addr ),
-      .row_ready_in     ( (row_ready && !ram_rst_busy) ));
+      .row_ready_in     ( (row_ready && !ram_rstb_busy) ));
+   
+   //---------------------------------------------------------
+   //                PHY and Display Model                  --
+   //---------------------------------------------------------
    
    led_display_driver_phy #(
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
-      dut_drv (
+      drv (
          .clk_in              ( clk_in ),
          .n_reset_in          ( n_reset_in ),
          
@@ -97,7 +104,19 @@ module led_display_ram_tb #(
          .green_bot_out       ( drv_bit_bot[1] ),
          .blue_bot_out        ( drv_bit_bot[2] ),
          .bit_clk_out         ( drv_bclk ),
-         .addr_out            ( drv_addr ));
+         .address_out         ( drv_address ));
+   
+   display_sim #(
+         .NUM_COLS   ( NUM_COL_PIXELS ),
+         .NUM_ROWS   ( NUM_ROW_PIXELS ),
+         .VERBOSE    ( VERBOSE ))
+      display_sim_inst (
+         .bclk       ( drv_bclk ),
+         .rgb_top    ( drv_bit_top ),
+         .rgb_bot    ( drv_bit_bot ),
+         .addr_in    ( drv_address ),
+         .oe_in      (  ),
+         .le_in      ( drv_latch ));
    
    //---------------------------------------------------------
    //                         Tests                         --
@@ -134,11 +153,10 @@ module led_display_ram_tb #(
    
    task automatic sim_init();
       num_tests = 10;
-      ram_write_en = 1'b0;
       ram_wena = 4'h0;
       ram_addra = {32{1'b0}};
       ram_dina = {32{1'b0}};
-      reset_error_counters();
+      display_sim_inst.reset();
    endtask : sim_init
    
    task automatic set_num_test(input int n);
@@ -152,10 +170,6 @@ module led_display_ram_tb #(
       #1step;
       return;
    endtask : sim_cycles
-   
-   task reset_error_counters();
-      
-   endtask : reset_error_counters
    
    //---------------------------------------------------------
    //                         Driver                        --

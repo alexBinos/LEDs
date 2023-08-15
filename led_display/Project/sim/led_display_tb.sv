@@ -28,7 +28,7 @@ module led_display_tb();
    //---------------------------------------------------------
    //                   UUT - Display Driver                --
    //---------------------------------------------------------
-   /*
+   
    led_display_driver_phy_tb #(
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
          .NUM_ROW_PIXELS      ( NUM_ROW_PIXELS ),
@@ -37,13 +37,13 @@ module led_display_tb();
       led_display_driver_phy_uut (
          .clk_in     ( clk ),
          .n_reset_in ( nrst ));
-   */
+   
    led_display_pattern_gen_tb #(
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ))
       led_display_pattern_gen_uut (
          .clk_in     ( clk ),
          .n_reset_in ( nrst ));
-   /*
+
    led_display_pwm_gen_tb #(
          .SYS_CLK_FREQ        ( SYS_CLK_FREQ ),
          .PWM_FREQ            ( 100_000 ))
@@ -63,7 +63,7 @@ module led_display_tb();
       led_display_driver_ram_uut (
          .clk_in     ( clk ),
          .n_reset_in ( nrst ));
-   */
+   
    //---------------------------------------------------------
    //                            Main                       --
    //---------------------------------------------------------
@@ -73,7 +73,7 @@ module led_display_tb();
       
       reset();
       pass = 1;
-      /*
+     /* 
       // LED display driver PHY
       led_display_driver_phy_uut.sim_init();
       led_display_driver_phy_uut.set_num_test(100);
@@ -83,7 +83,7 @@ module led_display_tb();
       
       led_display_driver_phy_uut.test_01(pass_local);
       pass &= pass_local;
-      */
+      
       
       // LED display pattern generator
       led_display_pattern_gen_uut.sim_init();
@@ -91,6 +91,22 @@ module led_display_tb();
       
       led_display_pattern_gen_uut.test_01(pass_local);
       pass &= pass_local;
+      
+      // LED display PHY and pattern generator system
+      led_display_driver_uut.sim_init();
+      led_display_driver_uut.set_num_test(10);
+      
+      led_display_driver_uut.test_00(pass_local);
+      pass &= pass_local;
+      */
+      
+      led_display_driver_ram_uut.sim_init();
+      led_display_driver_ram_uut.set_num_test(10);
+      
+      led_display_driver_ram_uut.test_00(pass_local);
+      pass &= pass_local;
+      
+      # 10000
       
       if (pass) begin
          $display("Overall test: Pass");

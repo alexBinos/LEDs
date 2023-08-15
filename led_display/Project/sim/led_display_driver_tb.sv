@@ -72,7 +72,7 @@ module led_display_driver_tb #(
          .green_bot_out       ( drv_bit_bot[1] ),
          .blue_bot_out        ( drv_bit_bot[2] ),
          .bit_clk_out         ( drv_bclk ),
-         .addr_out            ( drv_addr ));
+         .address_out         ( drv_addr ));
    
    //---------------------------------------------------------
    //                   Sim - Display Module                --
@@ -86,7 +86,7 @@ module led_display_driver_tb #(
          .bclk       ( drv_bclk ),
          .rgb_top    ( drv_bit_top ),
          .rgb_bot    ( drv_bit_bot ),
-         .addr_in    ( ptg_row_address ),
+         .addr_in    ( drv_addr ),
          .oe_in      ( !drv_latch ),
          .le_in      ( drv_latch ));
    
@@ -99,10 +99,7 @@ module led_display_driver_tb #(
       
       pass = 1;
       
-      drive(dut_ptg.MODE_OFF, 0);
-      # 1000;
-      
-      drive(dut_ptg.DEBUG_V, 1);
+      drive(dut_ptg.MODE_SOLID, 1);
       
       # 10_000
       
@@ -124,7 +121,7 @@ module led_display_driver_tb #(
       num_tests = 10;
       ptg_mode = {4{1'b0}};
       ptg_colour = {3{1'b0}};
-      reset_error_counters();
+      display_sim_inst.reset();
    endtask : sim_init
    
    task automatic set_num_test(input int n);
@@ -138,11 +135,6 @@ module led_display_driver_tb #(
       #1step;
       return;
    endtask : sim_cycles
-   
-   task reset_error_counters();
-      address_error_count = 0;
-      data_error_count = 0;
-   endtask : reset_error_counters
    
    //---------------------------------------------------------
    //                         Driver                        --
@@ -160,83 +152,5 @@ module led_display_driver_tb #(
    //---------------------------------------------------------
    //                      Monitors                         --
    //---------------------------------------------------------
-   
-   task static monitor_address();
-      int expected = 0;
-      int mode = 0;
       
-      sim_cycles(1);
-      
-      if (ptg_mode != mode) begin
-         mode = ptg_mode;
-         expected = 0;
-         if (VERBOSE) $display("New expected mode: %d", mode);
-      end
-      
-      if (!(ptg_row_address == expected)) begin
-         address_error_count++;
-         $display("Address error; Expected: %d, Read %d; Time: %t", expected, ptg_row_address, $time);
-      end
-      
-      if (ptg_row_valid) begin
-         expected++;
-         if (expected == 16) begin
-            expected = 0;
-         end
-         if (VERBOSE) $display("New expected address: %d", expected);
-      end
-      
-      return;
-   endtask : monitor_address
-   
-   initial begin
-      forever begin
-         monitor_address();
-      end
-   end
-   
-   task static monitor_valid();
-      bit expected = 0;
-      // TODO
-      sim_cycles(1);
-      
-      
-   endtask : monitor_valid
-   
-   task static monitor_datastream();
-      rgb_row_t expected;
-      
-      expected = {GL_RGB_ROW_W{1'b0}};
-      sim_cycles(1);
-      case (ptg_mode)
-         dut_ptg.MODE_OFF : begin
-            expected = {GL_RGB_ROW_W{1'b0}};
-         end
-         
-         dut_ptg.MODE_SOLID : begin
-            expected.top.red     <= {GL_NUM_COL_PIXELS{ptg_colour[0]}};
-            expected.bot.red     <= {GL_NUM_COL_PIXELS{ptg_colour[0]}};
-            expected.top.green   <= {GL_NUM_COL_PIXELS{ptg_colour[1]}};
-            expected.bot.green   <= {GL_NUM_COL_PIXELS{ptg_colour[1]}};
-            expected.top.blue    <= {GL_NUM_COL_PIXELS{ptg_colour[2]}};
-            expected.bot.blue    <= {GL_NUM_COL_PIXELS{ptg_colour[2]}};
-         end
-      endcase
-      
-      if (ptg_row_valid) begin
-         if (!(expected == ptg_row)) begin
-            data_error_count++;
-            $display("Datastream error mode %d; Expected: %X, Read: %X", ptg_mode, expected, ptg_row);
-         end
-      end
-      
-      return;
-   endtask : monitor_datastream
-   
-   initial begin
-      forever begin
-         monitor_datastream();
-      end
-   end
-   
 endmodule
