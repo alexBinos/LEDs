@@ -171,7 +171,7 @@ module led_display_ram_control (
          row_addr_buf <= {4{1'b0}};
       end
       else begin
-         if (state == SS_DONE) begin
+         if (row_valid_buf) begin
             row_addr_buf <= row_addr_buf + 1'b1;
          end
       end
