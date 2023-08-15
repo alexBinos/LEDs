@@ -103,7 +103,7 @@ module led_display (
    //---------------------------------------------------------
    //                      Display Driver                  --
    //---------------------------------------------------------
-   /*
+   
    led_display_ram_control frame_ram_control (
       .clk_in           ( clk20MHz ),
       .n_reset_in       ( nrst ),
@@ -113,7 +113,7 @@ module led_display (
       .row_valid_out    ( row_valid ),
       .row_address_out  ( row_addr ),
       .row_ready_in     ( row_ready ));
-   */
+   /*
    led_display_pattern_gen #(
          .SYS_CLK_FREQ        ( DISP_CLK_FREQ ),
          .SIMULATION          ( 0 ))
@@ -126,7 +126,7 @@ module led_display (
          .row_valid_out       ( row_valid ),
          .row_ready_in        ( row_ready ),
          .row_address_out     ( row_addr ));
-   
+   */
    led_display_driver_phy #(
          .SYS_CLK_FREQ        ( DISP_CLK_FREQ ))
       drv (
