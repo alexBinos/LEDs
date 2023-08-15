@@ -12,7 +12,7 @@ module led_display_ram_tb #(
    
    import led_display_package::*;
    
-   parameter integer VERBOSE = 1;
+   parameter integer VERBOSE = 0;
    
    //---------------------------------------------------------
    //                         Signals                       --
@@ -43,8 +43,7 @@ module led_display_ram_tb #(
    
    int num_tests;
    
-   int address_error_count;
-   int data_error_count;
+   rgb_row_t expected[$];
    
    //---------------------------------------------------------
    //                         Frame RAM                     --
@@ -79,7 +78,7 @@ module led_display_ram_tb #(
       .row_out          ( row ),
       .row_valid_out    ( row_valid ),
       .row_address_out  ( row_addr ),
-      .row_ready_in     ( (row_ready && !ram_rstb_busy) ));
+      .row_ready_in     ( (row_ready && !ram_rstb_busy && ram_control_ready) ));
    
    //---------------------------------------------------------
    //                PHY and Display Model                  --
@@ -125,17 +124,17 @@ module led_display_ram_tb #(
    task test_00 (output bit pass);
       $display("LED display memory controller Test 00: ");
       
-      pass = 1;
-      
       ram_control_ready = 1'b0;
       
       # 100
-      /*
-      ram_wena = 4'hF;
-      ram_addra = 0;
-      ram_dina = 32'h11111111;
-      */
-      # 20000
+      drive();
+      # 100
+      
+      ram_control_ready = 1'b1;
+      
+      # 300000
+      
+      check(pass);
       
       if (pass) begin
          $display("Pass");
@@ -156,6 +155,7 @@ module led_display_ram_tb #(
       ram_wena = 4'h0;
       ram_addra = {32{1'b0}};
       ram_dina = {32{1'b0}};
+      expected.delete();
       display_sim_inst.reset();
    endtask : sim_init
    
@@ -175,9 +175,58 @@ module led_display_ram_tb #(
    //                         Driver                        --
    //---------------------------------------------------------
    
+   task automatic drive();
+      rgb_row_t r;
+      int addr = 0;
+      
+      expected.delete();
+      
+      for (int j = 0; j < 16; j++) begin
+         std::randomize(r);
+         expected.push_back(r);
+         for (int p = 11; p >= 0; p--) begin
+            sim_write_ram(r[(32 * p)+:32], addr);
+            addr += 4;
+         end
+      end
+      
+      return;
+   endtask : drive
+   
+   task automatic sim_write_ram(input logic [31:0] data, input logic [31:0] addr);
+      sim_cycles(1);
+      ram_dina = data;
+      ram_addra = addr;
+      ram_wena = 4'hF;
+      sim_cycles(1);
+      ram_wena = 4'h0;
+      
+      return;
+   endtask : sim_write_ram
+   
    //---------------------------------------------------------
-   //                      Monitors                         --
+   //                      Checker                          --
    //---------------------------------------------------------
-
+   
+   task automatic check(output bit pass);
+      rgb_row_t r;
+      logic [3:0] a;
+      int n;
+      bit pass_local;
+      pass = 1'b1;
+      
+      n = display_sim_inst.frame.size();
+      for (int i = 0; i < n; i++) begin
+         r = display_sim_inst.frame.pop_front();
+         a = display_sim_inst.address.pop_front();
+         pass_local = (r == expected[a]);
+         pass &= pass_local;
+         assert(pass_local) else $display("Checker error at address %X", a);
+      end
+      
+      if (VERBOSE) $display("Checker tested %d addresses", n);
+      
+      return;
+   endtask : check
    
 endmodule
