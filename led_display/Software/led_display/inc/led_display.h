@@ -14,6 +14,10 @@ typedef struct {
    pxl_row_t bot;
 } rgb_row_t;
 
+typedef struct {
+   pxl_row_t row[2];
+} rgb_row_simple_t;
+
 typedef enum {
    RED,
    GREEN,
