@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 
 #define NUM_ROWS 16
 
@@ -12,3 +13,9 @@ typedef struct {
    pxl_row_t top;
    pxl_row_t bot;
 } rgb_row_t;
+
+typedef enum {
+   RED,
+   GREEN,
+   BLUE
+} colour_t;
